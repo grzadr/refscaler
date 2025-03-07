@@ -1,0 +1,43 @@
+{
+    // Editor general settings
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "editor.rulers": [
+        80
+    ],
+    "editor.wordWrap": "off",
+    "editor.renderWhitespace": "all",
+    // Files management
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 500,
+    "files.associations": {
+        ".env": "shellscript",
+        "*.sh": "shellscript",
+        ".secrets": "shellscript"
+    },
+    // Go-specific configuration
+    "go.lintTool": "golangci-lint",
+    "go.lintFlags": [
+        "--fast"
+    ],
+    "go.formatTool": "goimports",
+    "go.useLanguageServer": true,
+    "gopls": {
+        "usePlaceholders": true,
+        "staticcheck": true
+    },
+    // Language-specific settings
+    "[go]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "always"
+        }
+    },
+    "[github-actions-workflow]": {
+        "editor.defaultFormatter": "github.vscode-github-actions",
+        "editor.detectIndentation": false,
+        "editor.indentSize": 2
+    }
+}
