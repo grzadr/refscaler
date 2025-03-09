@@ -23,7 +23,7 @@ func NewUnitGroupDefault() UnitGroup {
 type UnitSlice []Unit
 
 type UnitRegistry interface {
-	detect(unitQuery string) (group UnitGroup, ok bool)
+	find(unitQuery string) (group UnitGroup, ok bool)
 }
 
 type UnitRegistryFiles struct {

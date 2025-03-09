@@ -1,10 +1,10 @@
 package refscaler
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"iter"
+	"io"
 )
 
 // UnitEntry represents a single unit definition.
@@ -31,9 +31,9 @@ type NextUnitEntry struct {
 
 // IterUnitEntries returns an iterator over unit entries in JSON data.
 // The iterator yields an index and Result for each entry.
-func IterUnitEntries(jsonData []byte) iter.Seq2[int, NextUnitEntry] {
+func IterUnitEntries(jsonData io.Reader) iter.Seq2[int, NextUnitEntry] {
 	return func(yield func(int, NextUnitEntry) bool) {
-		decoder := json.NewDecoder(bytes.NewReader(jsonData))
+		decoder := json.NewDecoder(jsonData)
 
 		// Check for opening delimiter
 		if err := expectToken(decoder, json.Delim('{')); err != nil {
@@ -71,7 +71,7 @@ func expectToken(decoder *json.Decoder, expected json.Delim) error {
 }
 
 // parseNextEntry reads the next unit entry from the decoder.
-func parseNextEntry(decoder *json.Decoder) (UnitEntry, error) {
+func parseNextEntry(decoder *json.Decoder) (entry UnitEntry, err error) {
 	// Read key (unit name)
 	key, err := decoder.Token()
 	if err != nil {
@@ -83,8 +83,6 @@ func parseNextEntry(decoder *json.Decoder) (UnitEntry, error) {
 		return UnitEntry{}, fmt.Errorf("expected string key, got %T", key)
 	}
 
-	// Read and decode the value
-	var entry UnitEntry
 	if err := decoder.Decode(&entry); err != nil {
 		return UnitEntry{}, fmt.Errorf("decoding value for %q: %w", name, err)
 	}

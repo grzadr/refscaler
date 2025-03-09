@@ -15,7 +15,7 @@ type TestUnitEntry struct {
 
 type TestEntryRecords map[string]TestUnitEntry
 
-var testJsonMap = TestEntryRecords{
+var fixtureUnitEntryRecords = TestEntryRecords{
 	"meter": {
 		Value:   1.0,
 		Aliases: []string{"m", "meters"},
@@ -26,20 +26,35 @@ var testJsonMap = TestEntryRecords{
 	},
 }
 
+var fixtureUnitEntryRecordsStr = func() []byte {
+	jsonData, err := json.Marshal(fixtureUnitEntryRecords)
 
-var testJsonData []byte = func() []byte {
-	data, err := json.Marshal(testJsonMap)
 	if err != nil {
 		panic(err)
 	}
-	return data
+
+	return jsonData
 }()
+
+var fixtureUnitEntries = func() []UnitEntry {
+	entries := make([]UnitEntry, 0, len(fixtureUnitEntryRecords))
+
+	for name, entry := range fixtureUnitEntryRecords {
+		entries = append(entries, UnitEntry{
+			Name:    name,
+			Value:   entry.Value,
+			Aliases: entry.Aliases,
+		})
+	}
+
+	return entries
+}
 
 var testFSDirPath = "units"
 
 var testFS = fstest.MapFS{
 	path.Join(testFSDirPath, "test_unit.json"): {
-		Data: testJsonData,
+		Data: fixtureUnitEntryRecordsStr,
 	},
 	path.Join(testFSDirPath, "empty.json"): {
 		Data: []byte("{}"),

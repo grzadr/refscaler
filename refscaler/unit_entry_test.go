@@ -6,30 +6,6 @@ import (
 	"testing"
 )
 
-var testUnitEntryJsonData = []byte(`{
-    "meter": {
-        "value": 1.0,
-        "aliases": ["m", "meters"]
-    },
-    "kilometer": {
-        "value": 1000.0,
-        "aliases": ["km", "kilometers"]
-    }
-}`)
-
-var testExpectedData = []UnitEntry{
-	{ // Removed UnitEntry{} syntax as it's redundant
-		Name:    "meter",
-		Value:   1.0,
-		Aliases: []string{"m", "meters"},
-	},
-	{
-		Name:    "kilometer",
-		Value:   1000.0,
-		Aliases: []string{"km", "kilometers"},
-	},
-}
-
 func helpCompareUnitEntry(a, b *UnitEntry) bool {
 	if a.Name != b.Name || a.Value != b.Value || len(a.Aliases) != len(b.Aliases) {
 		return false
@@ -45,6 +21,7 @@ func helpCompareUnitEntry(a, b *UnitEntry) bool {
 }
 
 func TestIterUnitEntries_Success(t *testing.T) {
+
 	for i, next := range IterUnitEntries(testUnitEntryJsonData) {
 		if next.Err != nil {
 			t.Fatalf("Received unexpected error %v", next.Err)
