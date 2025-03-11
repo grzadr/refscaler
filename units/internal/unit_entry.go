@@ -1,16 +1,16 @@
-package refscaler
+package units_entry
 
 import (
 	"encoding/json"
 	"fmt"
-	"iter"
 	"io"
+	"iter"
 )
 
 // UnitEntry represents a single unit definition.
 // Fields are exported to work with json.Decoder
 type UnitEntry struct {
-	Name    string   `json:"-"` // Filled from JSON key
+	Name    string   `json:"name"`
 	Value   float64  `json:"value"`
 	Aliases []string `json:"aliases"`
 }
@@ -36,7 +36,7 @@ func IterUnitEntries(jsonData io.Reader) iter.Seq2[int, NextUnitEntry] {
 		decoder := json.NewDecoder(jsonData)
 
 		// Check for opening delimiter
-		if err := expectToken(decoder, json.Delim('{')); err != nil {
+		if err := expectToken(decoder, json.Delim('[')); err != nil {
 			yield(0, NextUnitEntry{Err: err})
 			return
 		}
@@ -73,24 +73,24 @@ func expectToken(decoder *json.Decoder, expected json.Delim) error {
 // parseNextEntry reads the next unit entry from the decoder.
 func parseNextEntry(decoder *json.Decoder) (entry UnitEntry, err error) {
 	// Read key (unit name)
-	key, err := decoder.Token()
-	if err != nil {
-		return UnitEntry{}, fmt.Errorf("reading key: %w", err)
-	}
+	// key, err := decoder.Token()
+	// if err != nil {
+	// 	return UnitEntry{}, fmt.Errorf("reading key: %w", err)
+	// }
 
-	name, ok := key.(string)
-	if !ok {
-		return UnitEntry{}, fmt.Errorf("expected string key, got %T", key)
-	}
+	// name, ok := key.(string)
+	// if !ok {
+	// 	return UnitEntry{}, fmt.Errorf("expected string key, got %T", key)
+	// }
 
 	if err := decoder.Decode(&entry); err != nil {
-		return UnitEntry{}, fmt.Errorf("decoding value for %q: %w", name, err)
+		return UnitEntry{}, fmt.Errorf("error decoding entry: %w", err)
 	}
 
-	entry.Name = name
+	// entry.Name = name
 
 	if err := entry.validate(); err != nil {
-		return UnitEntry{}, fmt.Errorf("invalid entry %q: %w", name, err)
+		return UnitEntry{}, fmt.Errorf("invalid entry: %w", err)
 	}
 
 	return entry, nil

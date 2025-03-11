@@ -1,5 +1,9 @@
 package refscaler
 
+import (
+	"github.com/grzadr/refscaler/units"
+)
+
 type MeasureValue float64
 
 type Record struct {
@@ -14,13 +18,13 @@ type Enlistment struct {
 	scale     MeasureValue
 	unitRef   string
 	recordRef *Record
-	units     UnitSlice
+	units     units.UnitSlice
 }
 
 func NewEnlistment(
 	scale string,
 	records []string,
-	units UnitRegistry,
+	units units.UnitRegistry,
 ) (*Enlistment, error) {
-
+	return nil, nil
 }

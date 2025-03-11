@@ -1,8 +1,8 @@
-package refscaler
+package units
 
 type Unit struct {
 	name       string
-	multiplier MeasureValue
+	multiplier float64
 }
 
 type UnitGroup struct {

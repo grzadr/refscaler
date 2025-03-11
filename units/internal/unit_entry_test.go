@@ -1,8 +1,9 @@
-package refscaler
+package units_entry
 
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -21,21 +22,28 @@ func helpCompareUnitEntry(a, b *UnitEntry) bool {
 }
 
 func TestIterUnitEntries_Success(t *testing.T) {
-
-	for i, next := range IterUnitEntries(testUnitEntryJsonData) {
+	reader := bytes.NewReader(fixtureUnitEntriesByte)
+	// fmt.Printf("%s\n", fixtureUnitEntryRecordsByte)
+	for i, next := range IterUnitEntries(reader) {
 		if next.Err != nil {
 			t.Fatalf("Received unexpected error %v", next.Err)
 		}
 
-		if !helpCompareUnitEntry(&next.Entry, &testExpectedData[i]) {
-			t.Errorf("Entry %d: expected %+v, got %+v", i, testExpectedData[i], next.Entry)
+		if !helpCompareUnitEntry(&next.Entry, &fixtureUnitEntries[i]) {
+			t.Errorf(
+				"Entry %d: expected %+v, got %+v",
+				i,
+				fixtureUnitEntries[i],
+				next.Entry,
+			)
 		}
 	}
 }
 
 func TestIterUnitEntries_EarlyTermination(t *testing.T) {
 	count := 0
-	for i, next := range IterUnitEntries(testUnitEntryJsonData) {
+	reader := bytes.NewReader(fixtureUnitEntriesByte)
+	for i, next := range IterUnitEntries(reader) {
 		count = i
 		if next.Err != nil {
 			t.Errorf("Received unexpected error %v", next.Err)
@@ -51,33 +59,33 @@ func TestIterUnitEntries_EarlyTermination(t *testing.T) {
 func TestIterUnitEntries_InvalidJSON(t *testing.T) {
 	testCases := []struct {
 		name    string
-		input   []byte
+		input   string
 		wantErr string
 	}{
 		{
 			name:    "invalid opening delimiter",
-			input:   []byte(`["not an object"]`),
+			input:   `["not an object"]`,
 			wantErr: "expected {, got [",
 		},
 		{
 			name:    "corrupted JSON",
-			input:   []byte(`{invalid`),
+			input:   `{invalid`,
 			wantErr: "reading key: invalid character 'i'",
 		},
 		{
 			name: "non-string key",
 			// This will trigger the type assertion failure
-			input:   []byte(`{1: {"value": 1.0, "aliases": ["m"]}}`),
+			input:   `{1: {"value": 1.0, "aliases": ["m"]}}`,
 			wantErr: "reading key: invalid character '1'",
 		},
 		{
 			name:    "invalid value structure",
-			input:   []byte(`{"key": "not an object"}`),
+			input:   `{"key": "not an object"}`,
 			wantErr: "decoding value for \"key\": json: cannot unmarshal string into Go value of type parsing.UnitEntry",
 		},
 		{
 			name:    "empty input",
-			input:   []byte{},
+			input:   ``,
 			wantErr: "reading token: EOF",
 		},
 	}
@@ -85,7 +93,7 @@ func TestIterUnitEntries_InvalidJSON(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var gotErr error
-			for _, next := range IterUnitEntries(tc.input) {
+			for _, next := range IterUnitEntries(strings.NewReader(tc.input)) {
 				gotErr = next.Err
 				break
 			}
@@ -131,36 +139,36 @@ func TestParseNextEntry_NonStringKey(t *testing.T) {
 func TestIterUnitEntries_ComplexErrors(t *testing.T) {
 	testCases := []struct {
 		name    string
-		input   []byte
+		input   string
 		wantErr string
 	}{
 		{
 			name: "missing value field",
-			input: []byte(`{
+			input: `{
                 "meter": {
                     "aliases": ["m"]
                 }
-            }`),
+            }`,
 			wantErr: "invalid entry \"meter\": positive non-zero value field is required",
 		},
 		{
 			name: "invalid value type",
-			input: []byte(`{
+			input: `{
                 "meter": {
                     "value": "not a number",
                     "aliases": ["m"]
                 }
-            }`),
+            }`,
 			wantErr: "decoding value for \"meter\": json: cannot unmarshal string into Go struct field UnitEntry.value of type float64",
 		},
 		{
 			name: "invalid aliases type",
-			input: []byte(`{
+			input: `{
                 "meter": {
                     "value": 1.0,
                     "aliases": "not an array"
                 }
-            }`),
+            }`,
 			wantErr: "decoding value for \"meter\": json: cannot unmarshal string into Go struct field UnitEntry.aliases of type []string",
 		},
 	}
@@ -168,7 +176,7 @@ func TestIterUnitEntries_ComplexErrors(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var gotErr error
-			for _, next := range IterUnitEntries(tc.input) {
+			for _, next := range IterUnitEntries(strings.NewReader(tc.input)) {
 				gotErr = next.Err
 				break
 			}
@@ -234,8 +242,9 @@ func TestUnitEntry_Validate(t *testing.T) {
 
 // Benchmark to ensure performance
 func BenchmarkIterUnitEntries(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		for _, next := range IterUnitEntries(testUnitEntryJsonData) {
+	for b.Loop() {
+		reader := bytes.NewReader(fixtureUnitEntriesByte)
+		for _, next := range IterUnitEntries(reader) {
 			if next.Err != nil {
 				b.Fatal(next.Err)
 			}
