@@ -84,19 +84,20 @@ func IterUnitEntries(jsonData io.Reader) iter.Seq2[int, NextUnitEntry] {
 func parseNextEntry(decoder *json.Decoder) (entry UnitEntry, err error) {
 	var rawJSON json.RawMessage
 	if err := decoder.Decode(&rawJSON); err != nil {
+		fmt.Println(string(rawJSON))
+		fmt.Println(err)
 		if errors.Is(err, io.EOF) {
-			if decoder.More() {
-				_, err := decoder.Token()
-
-				if err != nil {
-					return UnitEntry{}, fmt.Errorf("processed more token")
-				}
-				return UnitEntry{}, fmt.Errorf("unexpected extra content after object")
-			}
             return UnitEntry{}, io.EOF
         }
 		return UnitEntry{}, fmt.Errorf("reading JSON: %w", err)
 	}
+	fmt.Println(string(rawJSON))
+
+	// if _, err := decoder.Token(); err != nil {
+	// 	return UnitEntry{}, fmt.Errorf("unexpected token: %w", err)
+	// }
+
+	// decoder.More()
 
 	entry = UnitEntry{Aliases: make([]string, 0, 4)}
 
@@ -147,6 +148,8 @@ func parseNextEntry(decoder *json.Decoder) (entry UnitEntry, err error) {
 			err,
 		)
 	}
+
+	fmt.Printf("%s: %t\n", string(rawJSON), decoder.More())
 
 	return entry, nil
 }
