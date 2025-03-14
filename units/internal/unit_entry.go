@@ -2,9 +2,15 @@ package units_entry
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"iter"
+)
+
+var (
+	ErrEmptyName = errors.New("unit name cannot be empty")
+	ErrZeroValue = errors.New("unit value must be positive non-zero")
 )
 
 // UnitEntry represents a single unit definition.
@@ -16,8 +22,11 @@ type UnitEntry struct {
 }
 
 func (u UnitEntry) validate() error {
-	if u.Value == 0 {
-		return fmt.Errorf("positive non-zero value field is required")
+	if len(u.Name) == 0 {
+		return ErrEmptyName
+	}
+	if u.Value <= 0 {
+		return ErrZeroValue
 	}
 	return nil
 }
@@ -72,25 +81,62 @@ func expectToken(decoder *json.Decoder, expected json.Delim) error {
 
 // parseNextEntry reads the next unit entry from the decoder.
 func parseNextEntry(decoder *json.Decoder) (entry UnitEntry, err error) {
-	// Read key (unit name)
-	// key, err := decoder.Token()
-	// if err != nil {
-	// 	return UnitEntry{}, fmt.Errorf("reading key: %w", err)
-	// }
-
-	// name, ok := key.(string)
-	// if !ok {
-	// 	return UnitEntry{}, fmt.Errorf("expected string key, got %T", key)
-	// }
-
-	if err := decoder.Decode(&entry); err != nil {
-		return UnitEntry{}, fmt.Errorf("error decoding entry: %w", err)
+	var rawJSON json.RawMessage
+	if err := decoder.Decode(&rawJSON); err != nil {
+		if errors.Is(err, io.EOF) {
+			return UnitEntry{}, io.EOF
+		}
+		return UnitEntry{}, fmt.Errorf("reading JSON: %w", err)
 	}
 
-	// entry.Name = name
+	entry = UnitEntry{Aliases: make([]string, 0, 4)}
+
+	// Try to unmarshal the raw JSON into the entry struct
+	if err := json.Unmarshal(rawJSON, &entry); err != nil {
+		var syntaxErr *json.SyntaxError
+		var typeErr *json.UnmarshalTypeError
+
+		switch {
+		case errors.As(err, &syntaxErr):
+			return UnitEntry{}, fmt.Errorf(
+				"syntax error at offset %d (content: %s): %w",
+				syntaxErr.Offset,
+				string(rawJSON),
+				err,
+			)
+
+		case errors.As(err, &typeErr):
+			if field := typeErr.Field; field != "" {
+				return UnitEntry{}, fmt.Errorf(
+					"cannot unmarshal %s `%s` into %s field `%s`",
+					typeErr.Value,
+					string(rawJSON),
+					typeErr.Type.String(),
+					typeErr.Field,
+				)
+			}
+			return UnitEntry{}, fmt.Errorf(
+				"cannot unmarshal %s `%s` into %s",
+				typeErr.Value,
+				string(rawJSON),
+				typeErr.Type.String(),
+			)
+
+		default:
+			return UnitEntry{}, fmt.Errorf(
+				"error decoding entry (content: %s): %w",
+				string(rawJSON),
+				err,
+			)
+		}
+	}
 
 	if err := entry.validate(); err != nil {
-		return UnitEntry{}, fmt.Errorf("invalid entry: %w", err)
+		return UnitEntry{}, fmt.Errorf(
+			"error validating entry %s: %w",
+			string(rawJSON),
+			err,
+		)
 	}
 
 	return entry, nil

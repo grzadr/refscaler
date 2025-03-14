@@ -11,19 +11,19 @@ import (
 var fixtureUnitEntriesStr = `
 [
 	{
-		"name": "meter",
-		"value": 1.0,
-		"aliases": [
-			"m",
-			"meters"
-		]
-	},
-	{
 		"name": "kilometer",
 		"value": 1000.0,
 		"aliases": [
 			"km",
 			"kilometers"
+		]
+	},
+	{
+		"name": "meter",
+		"value": 1.0,
+		"aliases": [
+			"m",
+			"meters"
 		]
 	}
 ]
@@ -43,7 +43,7 @@ var testFSDirPath = "units"
 
 var testFS = fstest.MapFS{
 	path.Join(testFSDirPath, "test_unit.json"): {
-		Data: fixtureUnitEntriesByte,
+		Data: []byte(fixtureUnitEntriesStr),
 	},
 	path.Join(testFSDirPath, "empty.json"): {
 		Data: []byte("{}"),

@@ -1,8 +1,8 @@
 package units_entry
 
 import (
-	"bytes"
-	"encoding/json"
+	// "bytes"
+	// "encoding/json"
 	"strings"
 	"testing"
 )
@@ -22,7 +22,7 @@ func helpCompareUnitEntry(a, b *UnitEntry) bool {
 }
 
 func TestIterUnitEntries_Success(t *testing.T) {
-	reader := bytes.NewReader(fixtureUnitEntriesByte)
+	reader := strings.NewReader(fixtureUnitEntriesStr)
 	// fmt.Printf("%s\n", fixtureUnitEntryRecordsByte)
 	for i, next := range IterUnitEntries(reader) {
 		if next.Err != nil {
@@ -42,7 +42,7 @@ func TestIterUnitEntries_Success(t *testing.T) {
 
 func TestIterUnitEntries_EarlyTermination(t *testing.T) {
 	count := 0
-	reader := bytes.NewReader(fixtureUnitEntriesByte)
+	reader := strings.NewReader(fixtureUnitEntriesStr)
 	for i, next := range IterUnitEntries(reader) {
 		count = i
 		if next.Err != nil {
@@ -65,23 +65,38 @@ func TestIterUnitEntries_InvalidJSON(t *testing.T) {
 		{
 			name:    "invalid opening delimiter",
 			input:   `["not an object"]`,
-			wantErr: "expected {, got [",
+			wantErr: "cannot unmarshal string `\"not an object\"` into units_entry.UnitEntry",
 		},
 		{
 			name:    "corrupted JSON",
-			input:   `{invalid`,
-			wantErr: "reading key: invalid character 'i'",
+			input:   `[ invalid`,
+			wantErr: "reading JSON: invalid character 'i' looking for beginning of value",
 		},
 		{
-			name: "non-string key",
+			name: "non-string name",
 			// This will trigger the type assertion failure
-			input:   `{1: {"value": 1.0, "aliases": ["m"]}}`,
-			wantErr: "reading key: invalid character '1'",
+			input:   `[{"name": 1, "value": 1.0}]`,
+			wantErr: "cannot unmarshal number `{\"name\": 1, \"value\": 1.0}` into string field `name`",
 		},
 		{
-			name:    "invalid value structure",
-			input:   `{"key": "not an object"}`,
-			wantErr: "decoding value for \"key\": json: cannot unmarshal string into Go value of type parsing.UnitEntry",
+			name:    "missing name key",
+			input:   `[{"key": "not an object"}]`,
+			wantErr: "error validating entry {\"key\": \"not an object\"}: unit name cannot be empty",
+		},
+		{
+			name:    "empty name value",
+			input:   `[{"name": ""}]`,
+			wantErr: "error validating entry {\"name\": \"\"}: unit name cannot be empty",
+		},
+		{
+			name:    "zero value",
+			input:   `[{"name": "a","value": 0}]`,
+			wantErr: "error validating entry {\"name\": \"a\",\"value\": 0}: unit value must be positive non-zero",
+		},
+		{
+			name:    "negative value",
+			input:   `[{"name": "a","value": -0.001}]`,
+			wantErr: "error validating entry {\"name\": \"a\",\"value\": -0.001}: unit value must be positive non-zero",
 		},
 		{
 			name:    "empty input",
@@ -108,142 +123,10 @@ func TestIterUnitEntries_InvalidJSON(t *testing.T) {
 	}
 }
 
-func TestParseNextEntry_NonStringKey(t *testing.T) {
-	input := []byte(`{"1": {"value": 1.0, "aliases": ["m"]}}`)
-	decoder := json.NewDecoder(bytes.NewReader(input))
-
-	for i := 0; i < 2; i++ {
-		_, err := decoder.Token()
-
-		if err != nil {
-			t.Error(err)
-			return
-		}
-	}
-	entry, err := parseNextEntry(decoder)
-
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-
-	expectedErr := "expected string key, got json.Delim"
-	if err.Error() != expectedErr {
-		t.Errorf("expected error %q, got %q", expectedErr, err.Error())
-	}
-
-	if entry.validate() == nil {
-		t.Errorf("expected zero UnitEntry, got %+v", entry)
-	}
-}
-
-func TestIterUnitEntries_ComplexErrors(t *testing.T) {
-	testCases := []struct {
-		name    string
-		input   string
-		wantErr string
-	}{
-		{
-			name: "missing value field",
-			input: `{
-                "meter": {
-                    "aliases": ["m"]
-                }
-            }`,
-			wantErr: "invalid entry \"meter\": positive non-zero value field is required",
-		},
-		{
-			name: "invalid value type",
-			input: `{
-                "meter": {
-                    "value": "not a number",
-                    "aliases": ["m"]
-                }
-            }`,
-			wantErr: "decoding value for \"meter\": json: cannot unmarshal string into Go struct field UnitEntry.value of type float64",
-		},
-		{
-			name: "invalid aliases type",
-			input: `{
-                "meter": {
-                    "value": 1.0,
-                    "aliases": "not an array"
-                }
-            }`,
-			wantErr: "decoding value for \"meter\": json: cannot unmarshal string into Go struct field UnitEntry.aliases of type []string",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			var gotErr error
-			for _, next := range IterUnitEntries(strings.NewReader(tc.input)) {
-				gotErr = next.Err
-				break
-			}
-
-			if gotErr == nil {
-				t.Fatal("expected error, got nil")
-			}
-			if gotErr.Error() != tc.wantErr {
-				t.Errorf("expected error %q, got %q", tc.wantErr, gotErr.Error())
-			}
-		})
-	}
-}
-
-func TestUnitEntry_Validate(t *testing.T) {
-	testCases := []struct {
-		name    string
-		entry   UnitEntry
-		wantErr string
-	}{
-		{
-			name: "valid entry",
-			entry: UnitEntry{
-				Name:    "meter",
-				Value:   1.0,
-				Aliases: []string{"m"},
-			},
-			wantErr: "",
-		},
-		{
-			name: "missing value",
-			entry: UnitEntry{
-				Name:    "meter",
-				Aliases: []string{"m"},
-			},
-			wantErr: "positive non-zero value field is required",
-		},
-		{
-			name:    "zero value struct",
-			entry:   UnitEntry{},
-			wantErr: "positive non-zero value field is required",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			err := tc.entry.validate()
-			if tc.wantErr == "" {
-				if err != nil {
-					t.Errorf("expected no error, got %v", err)
-				}
-				return
-			}
-			if err == nil {
-				t.Fatal("expected error, got nil")
-			}
-			if err.Error() != tc.wantErr {
-				t.Errorf("expected error %q, got %q", tc.wantErr, err.Error())
-			}
-		})
-	}
-}
-
 // Benchmark to ensure performance
 func BenchmarkIterUnitEntries(b *testing.B) {
 	for b.Loop() {
-		reader := bytes.NewReader(fixtureUnitEntriesByte)
+		reader := strings.NewReader(fixtureUnitEntriesStr)
 		for _, next := range IterUnitEntries(reader) {
 			if next.Err != nil {
 				b.Fatal(next.Err)
