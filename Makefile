@@ -21,7 +21,7 @@ lint:
 	go fmt $(SRC_DIR)
 	golangci-lint run
 
-test: lint
+test:
 	$(GOTEST) $(SRC_DIR)
 
 test-cover: test

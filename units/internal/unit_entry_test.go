@@ -63,6 +63,11 @@ func TestIterUnitEntries_InvalidJSON(t *testing.T) {
 		wantErr string
 	}{
 		{
+			name:    "unexpected token",
+			input:   `{"not an object"}`,
+			wantErr: "error reading token: expected [, got {",
+		},
+		{
 			name:    "invalid opening delimiter",
 			input:   `["not an object"]`,
 			wantErr: "cannot unmarshal string `\"not an object\"` into units_entry.UnitEntry",
@@ -101,7 +106,22 @@ func TestIterUnitEntries_InvalidJSON(t *testing.T) {
 		{
 			name:    "empty input",
 			input:   ``,
-			wantErr: "reading token: EOF",
+			wantErr: "error reading token: EOF",
+		},
+		{
+			name:    "syntax error - unclosed object",
+			input:   `[{"name": "test", "value": 1.0`,
+			wantErr: "syntax error at offset 28 (content: [{\"name\": \"test\", \"value\": 1.0): unexpected EOF",
+		},
+		{
+			name:    "syntax error - invalid escape sequence",
+			input:   `[{"name": "test with \invalid escape", "value": 1.0}]`,
+			wantErr: "syntax error at offset 21 (content: [{\"name\": \"test with \\invalid escape\", \"value\": 1.0}]): invalid character 'i' in string escape code",
+		},
+		{
+			name:    "other unmarshaling error - large number",
+			input:   `[{"name": "test", "value": 1e1000}]`,
+			wantErr: "error decoding entry (content: [{\"name\": \"test\", \"value\": 1e1000}]): json: cannot unmarshal number 1e1000 into Go struct field UnitEntry.value of type float64",
 		},
 	}
 

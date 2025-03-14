@@ -38,6 +38,20 @@ type NextUnitEntry struct {
 	Err   error
 }
 
+// expectToken checks for an expected JSON token.
+func expectToken(decoder *json.Decoder, expected json.Delim) error {
+	token, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+
+	delim, ok := token.(json.Delim)
+	if !ok || delim != expected {
+		return fmt.Errorf("expected %v, got %v", expected, token)
+	}
+	return nil
+}
+
 // IterUnitEntries returns an iterator over unit entries in JSON data.
 // The iterator yields an index and Result for each entry.
 func IterUnitEntries(jsonData io.Reader) iter.Seq2[int, NextUnitEntry] {
@@ -46,7 +60,7 @@ func IterUnitEntries(jsonData io.Reader) iter.Seq2[int, NextUnitEntry] {
 
 		// Check for opening delimiter
 		if err := expectToken(decoder, json.Delim('[')); err != nil {
-			yield(0, NextUnitEntry{Err: err})
+			yield(0, NextUnitEntry{Err: fmt.Errorf("error reading token: %w", err)})
 			return
 		}
 
@@ -65,27 +79,10 @@ func IterUnitEntries(jsonData io.Reader) iter.Seq2[int, NextUnitEntry] {
 	}
 }
 
-// expectToken checks for an expected JSON token.
-func expectToken(decoder *json.Decoder, expected json.Delim) error {
-	token, err := decoder.Token()
-	if err != nil {
-		return fmt.Errorf("reading token: %w", err)
-	}
-
-	delim, ok := token.(json.Delim)
-	if !ok || delim != expected {
-		return fmt.Errorf("expected %v, got %v", expected, token)
-	}
-	return nil
-}
-
 // parseNextEntry reads the next unit entry from the decoder.
 func parseNextEntry(decoder *json.Decoder) (entry UnitEntry, err error) {
 	var rawJSON json.RawMessage
 	if err := decoder.Decode(&rawJSON); err != nil {
-		if errors.Is(err, io.EOF) {
-			return UnitEntry{}, io.EOF
-		}
 		return UnitEntry{}, fmt.Errorf("reading JSON: %w", err)
 	}
 
