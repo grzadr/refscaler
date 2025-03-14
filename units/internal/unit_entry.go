@@ -57,6 +57,7 @@ func expectToken(decoder *json.Decoder, expected json.Delim) error {
 func IterUnitEntries(jsonData io.Reader) iter.Seq2[int, NextUnitEntry] {
 	return func(yield func(int, NextUnitEntry) bool) {
 		decoder := json.NewDecoder(jsonData)
+		decoder.DisallowUnknownFields()
 
 		// Check for opening delimiter
 		if err := expectToken(decoder, json.Delim('[')); err != nil {
@@ -83,6 +84,17 @@ func IterUnitEntries(jsonData io.Reader) iter.Seq2[int, NextUnitEntry] {
 func parseNextEntry(decoder *json.Decoder) (entry UnitEntry, err error) {
 	var rawJSON json.RawMessage
 	if err := decoder.Decode(&rawJSON); err != nil {
+		if errors.Is(err, io.EOF) {
+			if decoder.More() {
+				_, err := decoder.Token()
+
+				if err != nil {
+					return UnitEntry{}, fmt.Errorf("processed more token")
+				}
+				return UnitEntry{}, fmt.Errorf("unexpected extra content after object")
+			}
+            return UnitEntry{}, io.EOF
+        }
 		return UnitEntry{}, fmt.Errorf("reading JSON: %w", err)
 	}
 
