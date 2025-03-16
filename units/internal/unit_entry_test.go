@@ -23,7 +23,6 @@ func helpCompareUnitEntry(a, b *UnitEntry) bool {
 
 func TestIterUnitEntries_Success(t *testing.T) {
 	reader := strings.NewReader(fixtureUnitEntriesStr)
-	// fmt.Printf("%s\n", fixtureUnitEntryRecordsByte)
 	i := 0
 	for next, err := range IterUnitEntries(reader) {
 		if err != nil {
@@ -81,7 +80,6 @@ func TestIterUnitEntries_InvalidJSON(t *testing.T) {
 		},
 		{
 			name: "non-string name",
-			// This will trigger the type assertion failure
 			input:   `[{"name": 1, "value": 1.0}]`,
 			wantErr: "cannot unmarshal number `{\"name\": 1, \"value\": 1.0}` into string field `name`",
 		},
