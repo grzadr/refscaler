@@ -31,13 +31,6 @@ func (u UnitEntry) validate() error {
 	return nil
 }
 
-// NextUnitEntry wraps a UnitEntry with potential error.
-// This is cleaner than having a separate error field.
-type NextUnitEntry struct {
-	Entry UnitEntry
-	Err   error
-}
-
 // expectToken checks for an expected JSON token.
 func expectToken(decoder *json.Decoder, expected json.Delim) error {
 	token, err := decoder.Token()
@@ -54,28 +47,33 @@ func expectToken(decoder *json.Decoder, expected json.Delim) error {
 
 // IterUnitEntries returns an iterator over unit entries in JSON data.
 // The iterator yields an index and Result for each entry.
-func IterUnitEntries(jsonData io.Reader) iter.Seq2[int, NextUnitEntry] {
-	return func(yield func(int, NextUnitEntry) bool) {
+func IterUnitEntries(jsonData io.Reader) iter.Seq2[UnitEntry, error] {
+	return func(yield func(UnitEntry, error) bool) {
 		decoder := json.NewDecoder(jsonData)
 		decoder.DisallowUnknownFields()
 
 		// Check for opening delimiter
 		if err := expectToken(decoder, json.Delim('[')); err != nil {
-			yield(0, NextUnitEntry{Err: fmt.Errorf("error reading token: %w", err)})
+			yield(UnitEntry{}, fmt.Errorf("unexpected token: %w", err))
 			return
 		}
 
 		// Iterate through entries
-		for i := 0; decoder.More(); i++ {
+		for decoder.More(){
 			entry, err := parseNextEntry(decoder)
 			if err != nil {
-				yield(i, NextUnitEntry{Err: err})
+				yield(UnitEntry{}, err)
 				return
 			}
 
-			if !yield(i, NextUnitEntry{Entry: entry}) {
+			if !yield(entry, nil) {
 				return
 			}
+		}
+
+		if err := expectToken(decoder, json.Delim(']')); err != nil {
+			yield(UnitEntry{}, fmt.Errorf("unexpected token: %w", err))
+			return
 		}
 	}
 }
@@ -84,61 +82,33 @@ func IterUnitEntries(jsonData io.Reader) iter.Seq2[int, NextUnitEntry] {
 func parseNextEntry(decoder *json.Decoder) (entry UnitEntry, err error) {
 	var rawJSON json.RawMessage
 	if err := decoder.Decode(&rawJSON); err != nil {
-		fmt.Println(string(rawJSON))
-		fmt.Println(err)
-		if errors.Is(err, io.EOF) {
-            return UnitEntry{}, io.EOF
-        }
 		return UnitEntry{}, fmt.Errorf("reading JSON: %w", err)
 	}
-	fmt.Println(string(rawJSON))
-
-	// if _, err := decoder.Token(); err != nil {
-	// 	return UnitEntry{}, fmt.Errorf("unexpected token: %w", err)
-	// }
-
-	// decoder.More()
 
 	entry = UnitEntry{Aliases: make([]string, 0, 4)}
 
-	// Try to unmarshal the raw JSON into the entry struct
-	if err := json.Unmarshal(rawJSON, &entry); err != nil {
-		var syntaxErr *json.SyntaxError
-		var typeErr *json.UnmarshalTypeError
+	err = json.Unmarshal(rawJSON, &entry)
 
-		switch {
-		case errors.As(err, &syntaxErr):
-			return UnitEntry{}, fmt.Errorf(
-				"syntax error at offset %d (content: %s): %w",
-				syntaxErr.Offset,
-				string(rawJSON),
-				err,
-			)
+	var typeErr *json.UnmarshalTypeError
 
-		case errors.As(err, &typeErr):
-			if field := typeErr.Field; field != "" {
-				return UnitEntry{}, fmt.Errorf(
-					"cannot unmarshal %s `%s` into %s field `%s`",
-					typeErr.Value,
-					string(rawJSON),
-					typeErr.Type.String(),
-					typeErr.Field,
-				)
-			}
+	if errors.As(err, &typeErr) {
+		if field := typeErr.Field; field != "" {
 			return UnitEntry{}, fmt.Errorf(
-				"cannot unmarshal %s `%s` into %s",
+				"cannot unmarshal %s `%s` into %s field `%s`",
 				typeErr.Value,
 				string(rawJSON),
 				typeErr.Type.String(),
-			)
-
-		default:
-			return UnitEntry{}, fmt.Errorf(
-				"error decoding entry (content: %s): %w",
-				string(rawJSON),
-				err,
+				typeErr.Field,
 			)
 		}
+		return UnitEntry{}, fmt.Errorf(
+			"cannot unmarshal %s `%s` into %s",
+			typeErr.Value,
+			string(rawJSON),
+			typeErr.Type.String(),
+		)
+	} else if err != nil {
+		return UnitEntry{}, fmt.Errorf("unsupported JSON error: %w", err)
 	}
 
 	if err := entry.validate(); err != nil {
@@ -148,8 +118,6 @@ func parseNextEntry(decoder *json.Decoder) (entry UnitEntry, err error) {
 			err,
 		)
 	}
-
-	fmt.Printf("%s: %t\n", string(rawJSON), decoder.More())
 
 	return entry, nil
 }

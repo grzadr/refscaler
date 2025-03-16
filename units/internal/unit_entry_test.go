@@ -24,35 +24,37 @@ func helpCompareUnitEntry(a, b *UnitEntry) bool {
 func TestIterUnitEntries_Success(t *testing.T) {
 	reader := strings.NewReader(fixtureUnitEntriesStr)
 	// fmt.Printf("%s\n", fixtureUnitEntryRecordsByte)
-	for i, next := range IterUnitEntries(reader) {
-		if next.Err != nil {
-			t.Fatalf("Received unexpected error %v", next.Err)
+	i := 0
+	for next, err := range IterUnitEntries(reader) {
+		if err != nil {
+			t.Fatalf("Received unexpected error %v", err)
 		}
 
-		if !helpCompareUnitEntry(&next.Entry, &fixtureUnitEntries[i]) {
+		if !helpCompareUnitEntry(&next, &fixtureUnitEntries[i]) {
 			t.Errorf(
 				"Entry %d: expected %+v, got %+v",
 				i,
 				fixtureUnitEntries[i],
-				next.Entry,
+				next,
 			)
 		}
+		i++
 	}
 }
 
 func TestIterUnitEntries_EarlyTermination(t *testing.T) {
-	count := 0
 	reader := strings.NewReader(fixtureUnitEntriesStr)
-	for i, next := range IterUnitEntries(reader) {
-		count = i
-		if next.Err != nil {
-			t.Errorf("Received unexpected error %v", next.Err)
+	i := 0
+	for _, err := range IterUnitEntries(reader) {
+		if err != nil {
+			t.Errorf("Received unexpected error %v", err)
 		}
+		i++
 		break
 	}
 
-	if count != 0 {
-		t.Errorf("Expected to terminate at 0, but terminated at %d", count)
+	if i != 1 {
+		t.Errorf("Expected to terminate at 1, but terminated at %d", i)
 	}
 }
 
@@ -62,75 +64,77 @@ func TestIterUnitEntries_InvalidJSON(t *testing.T) {
 		input   string
 		wantErr string
 	}{
-		// {
-		// 	name:    "unexpected token",
-		// 	input:   `{"not an object"}`,
-		// 	wantErr: "error reading token: expected [, got {",
-		// },
-		// {
-		// 	name:    "invalid opening delimiter",
-		// 	input:   `["not an object"]`,
-		// 	wantErr: "cannot unmarshal string `\"not an object\"` into units_entry.UnitEntry",
-		// },
-		// {
-		// 	name:    "corrupted JSON",
-		// 	input:   `[ invalid`,
-		// 	wantErr: "reading JSON: invalid character 'i' looking for beginning of value",
-		// },
-		// {
-		// 	name: "non-string name",
-		// 	// This will trigger the type assertion failure
-		// 	input:   `[{"name": 1, "value": 1.0}]`,
-		// 	wantErr: "cannot unmarshal number `{\"name\": 1, \"value\": 1.0}` into string field `name`",
-		// },
-		// {
-		// 	name:    "missing name key",
-		// 	input:   `[{"key": "not an object"}]`,
-		// 	wantErr: "error validating entry {\"key\": \"not an object\"}: unit name cannot be empty",
-		// },
-		// {
-		// 	name:    "empty name value",
-		// 	input:   `[{"name": ""}]`,
-		// 	wantErr: "error validating entry {\"name\": \"\"}: unit name cannot be empty",
-		// },
-		// {
-		// 	name:    "zero value",
-		// 	input:   `[{"name": "a","value": 0}]`,
-		// 	wantErr: "error validating entry {\"name\": \"a\",\"value\": 0}: unit value must be positive non-zero",
-		// },
-		// {
-		// 	name:    "negative value",
-		// 	input:   `[{"name": "a","value": -0.001}]`,
-		// 	wantErr: "error validating entry {\"name\": \"a\",\"value\": -0.001}: unit value must be positive non-zero",
-		// },
-		// {
-		// 	name:    "empty input",
-		// 	input:   ``,
-		// 	wantErr: "error reading token: EOF",
-		// },
+		{
+			name:    "unexpected token",
+			input:   `{"not an object"}`,
+			wantErr: "unexpected token: expected [, got {",
+		},
+		{
+			name:    "invalid opening delimiter",
+			input:   `["not an object"]`,
+			wantErr: "cannot unmarshal string `\"not an object\"` into units_entry.UnitEntry",
+		},
+		{
+			name:    "corrupted JSON",
+			input:   `[ invalid`,
+			wantErr: "reading JSON: invalid character 'i' looking for beginning of value",
+		},
+		{
+			name: "non-string name",
+			// This will trigger the type assertion failure
+			input:   `[{"name": 1, "value": 1.0}]`,
+			wantErr: "cannot unmarshal number `{\"name\": 1, \"value\": 1.0}` into string field `name`",
+		},
+		{
+			name:    "missing name key",
+			input:   `[{"key": "not an object"}]`,
+			wantErr: "error validating entry {\"key\": \"not an object\"}: unit name cannot be empty",
+		},
+		{
+			name:    "empty name value",
+			input:   `[{"name": ""}]`,
+			wantErr: "error validating entry {\"name\": \"\"}: unit name cannot be empty",
+		},
+		{
+			name:    "zero value",
+			input:   `[{"name": "a","value": 0}]`,
+			wantErr: "error validating entry {\"name\": \"a\",\"value\": 0}: unit value must be positive non-zero",
+		},
+		{
+			name:    "negative value",
+			input:   `[{"name": "a","value": -0.001}]`,
+			wantErr: "error validating entry {\"name\": \"a\",\"value\": -0.001}: unit value must be positive non-zero",
+		},
+		{
+			name:    "empty input",
+			input:   ``,
+			wantErr: "unexpected token: EOF",
+		},
 		{
 			name:    "syntax error - unclosed object",
 			input:   `[{"name": "test", "value": 1.0}}`,
 			wantErr: "unexpected token: invalid character '}' after array element",
 		},
-		// {
-		// 	name:    "syntax error - invalid escape sequence",
-		// 	input:   `[{"name": "test with \invalid escape", "value": 1.0}]`,
-		// 	wantErr: "reading JSON: invalid character 'i' in string escape code",
-		// },
-		// {
-		// 	name:    "other unmarshaling error - large number",
-		// 	input:   `[{"name": "test", "value": 1e1000}]`,
-		// 	wantErr: "cannot unmarshal number 1e1000 `{\"name\": \"test\", \"value\": 1e1000}` into float64 field `value`",
-		// },
+		{
+			name:    "syntax error - invalid escape sequence",
+			input:   `[{"name": "test with \invalid escape", "value": 1.0}]`,
+			wantErr: "reading JSON: invalid character 'i' in string escape code",
+		},
+		{
+			name:    "other unmarshaling error - large number",
+			input:   `[{"name": "test", "value": 1e1000}]`,
+			wantErr: "cannot unmarshal number 1e1000 `{\"name\": \"test\", \"value\": 1e1000}` into float64 field `value`",
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var gotErr error
-			for _, next := range IterUnitEntries(strings.NewReader(tc.input)) {
-				gotErr = next.Err
-				break
+			for _, err := range IterUnitEntries(strings.NewReader(tc.input)) {
+				gotErr = err
+				if gotErr != nil {
+					break
+				}
 			}
 
 			if gotErr == nil {
@@ -147,9 +151,9 @@ func TestIterUnitEntries_InvalidJSON(t *testing.T) {
 func BenchmarkIterUnitEntries(b *testing.B) {
 	for b.Loop() {
 		reader := strings.NewReader(fixtureUnitEntriesStr)
-		for _, next := range IterUnitEntries(reader) {
-			if next.Err != nil {
-				b.Fatal(next.Err)
+		for _, err := range IterUnitEntries(reader) {
+			if err != nil {
+				b.Fatal(err)
 			}
 		}
 	}
