@@ -18,7 +18,7 @@ type Enlistment struct {
 	scale     MeasureValue
 	unitRef   string
 	recordRef *Record
-	units     units.UnitSlice
+	units     units.UnitsSlice
 }
 
 func NewEnlistment(

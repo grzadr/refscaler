@@ -1,4 +1,4 @@
-package units_entry
+package unit_entry
 
 import (
 	// "bytes"

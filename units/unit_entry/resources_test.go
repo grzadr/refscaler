@@ -1,10 +1,8 @@
-package units_entry
+package unit_entry
 
 import (
 	"encoding/json"
-	// "fmt"
 	"path"
-	// "testing"
 	"testing/fstest"
 )
 
