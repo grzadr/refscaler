@@ -79,7 +79,7 @@ func TestIterUnitEntries_InvalidJSON(t *testing.T) {
 			wantErr: "reading JSON: invalid character 'i' looking for beginning of value",
 		},
 		{
-			name: "non-string name",
+			name:    "non-string name",
 			input:   `[{"name": 1, "value": 1.0}]`,
 			wantErr: "cannot unmarshal number `{\"name\": 1, \"value\": 1.0}` into string field `name`",
 		},

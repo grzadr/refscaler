@@ -1,8 +1,9 @@
 package units
 
 import (
-	"io"
 	"fmt"
+	"io"
+
 	"github.com/grzadr/refscaler/units/unit_entry"
 )
 
@@ -11,11 +12,13 @@ type Unit struct {
 	multiplier float64
 }
 
-type UnitsSlice []Unit
-type UnitAliases map[string]*Unit
+type (
+	UnitsSlice  []Unit
+	UnitAliases map[string]*Unit
+)
 
 type UnitGroup struct {
-	units UnitsSlice
+	units   UnitsSlice
 	aliases UnitAliases
 	// allowPrefix bool // TODO
 	baseUnit Unit
@@ -34,18 +37,14 @@ func newUnitGroupDefault() UnitGroup {
 
 func NewUnitGroup(unitsData io.Reader) (group *UnitGroup, err error) {
 	// TODO
-	group := newUnitGroupDefault()
-	for next, err := range unit_entry.IterUnitEntries(unitsData) {
+	group = &newUnitGroupDefault()
+	for _, err := range unit_entry.IterUnitEntries(unitsData) {
 		if err != nil {
 			return group, fmt.Errorf("Error reading unit entry: %w", err)
 		}
-
-
 	}
-	return nil, nil
+	return group, nil
 }
-
-
 
 type UnitRegistry interface {
 	Find(unit string) (group *UnitGroup, ok bool)
@@ -55,7 +54,7 @@ type UnitRegistryFiles struct {
 	groups map[string]UnitGroup
 }
 
-func NewUnitRegistryFiles () (reg *UnitRegistryFiles, err error) {
+func NewUnitRegistryFiles() (reg *UnitRegistryFiles, err error) {
 	// TODO
 	return nil, nil
 }

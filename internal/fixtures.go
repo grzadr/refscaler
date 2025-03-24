@@ -1,9 +1,5 @@
 package internal
 
-import (
-	"json"
-)
-
 func GetFixtureUnitEntriesStr() string {
 	return `
 	[
@@ -26,14 +22,3 @@ func GetFixtureUnitEntriesStr() string {
 	]
 	`
 }
-
-func() []UnitEntry {
-	var entries []UnitEntry
-	err := json.Unmarshal([]byte(fixtureUnitEntriesStr), &entries)
-
-	if err != nil {
-		panic(err)
-	}
-
-	return entries
-}()

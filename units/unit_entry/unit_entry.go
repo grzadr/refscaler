@@ -59,7 +59,7 @@ func IterUnitEntries(jsonData io.Reader) iter.Seq2[UnitEntry, error] {
 		}
 
 		// Iterate through entries
-		for decoder.More(){
+		for decoder.More() {
 			entry, err := parseNextEntry(decoder)
 			if err != nil {
 				yield(UnitEntry{}, err)

@@ -26,10 +26,10 @@ var fixtureUnitEntriesStr = `
 	}
 ]
 `
+
 var fixtureUnitEntries = func() []UnitEntry {
 	var entries []UnitEntry
 	err := json.Unmarshal([]byte(fixtureUnitEntriesStr), &entries)
-
 	if err != nil {
 		panic(err)
 	}

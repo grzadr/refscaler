@@ -3,7 +3,7 @@
     "editor.formatOnSave": true,
     "editor.formatOnSaveMode": "file",
     "editor.rulers": [
-        80
+        100
     ],
     "editor.wordWrap": "off",
     "editor.renderWhitespace": "all",
@@ -22,7 +22,10 @@
     "go.lintFlags": [
         "--fast"
     ],
-    "go.formatTool": "goimports",
+    "go.formatTool": "custom",
+    "go.alternateTools": {
+        "customFormatter": "run_go_fmt.sh"
+    },
     "go.useLanguageServer": true,
     "gopls": {
         "usePlaceholders": true,
@@ -36,7 +39,6 @@
         }
     },
     "[github-actions-workflow]": {
-        "editor.defaultFormatter": "github.vscode-github-actions",
         "editor.detectIndentation": false,
         "editor.indentSize": 2
     }
