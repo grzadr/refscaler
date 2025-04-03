@@ -17,8 +17,10 @@ $(BIN_DIR):
 build: $(BIN_DIR)
 	$(GOBUILD) -o $(BIN_DIR)/$(BINARY_NAME) -v
 
-lint:
-	go fmt $(SRC_DIR)
+fmt:
+	golangci-lint fmt $(SRC_DIR)
+
+lint: fmt
 	golangci-lint run
 
 test:
@@ -36,4 +38,4 @@ clean:
 run: build
 	./$(BIN_DIR)/$(BINARY_NAME)
 
-.PHONY: all build lint test clean run test-cover
+.PHONY: all build lint test clean run test-cover fmt
