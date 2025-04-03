@@ -21,7 +21,7 @@ type UnitEntry struct {
 	Aliases []string `json:"aliases"`
 }
 
-func (u UnitEntry) validate() error {
+func (u *UnitEntry) validate() error {
 	if len(u.Name) == 0 {
 		return ErrEmptyName
 	}
@@ -29,6 +29,10 @@ func (u UnitEntry) validate() error {
 		return ErrZeroValue
 	}
 	return nil
+}
+
+func (u *UnitEntry) IsBase() bool {
+	return u.Value == 1.0
 }
 
 // expectToken checks for an expected JSON token.

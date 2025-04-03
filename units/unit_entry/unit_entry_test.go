@@ -71,7 +71,7 @@ func TestIterUnitEntries_InvalidJSON(t *testing.T) {
 		{
 			name:    "invalid opening delimiter",
 			input:   `["not an object"]`,
-			wantErr: "cannot unmarshal string `\"not an object\"` into units_entry.UnitEntry",
+			wantErr: "cannot unmarshal string `\"not an object\"` into unit_entry.UnitEntry",
 		},
 		{
 			name:    "corrupted JSON",

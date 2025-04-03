@@ -13,7 +13,7 @@ type Unit struct {
 }
 
 type (
-	UnitsSlice  []Unit
+	UnitsSlice  []*Unit
 	UnitAliases map[string]*Unit
 )
 
@@ -25,22 +25,36 @@ type UnitGroup struct {
 }
 
 func (g *UnitGroup) add(entry unit_entry.UnitEntry) error {
+	unit := &Unit{
+		name: entry.Name,
+		multiplier: entry.Value,
+	}
+
+	g.units = append(g.units, unit)
+	g.aliases[unit.name] = unit
+
+	for _, a := range entry.Aliases {
+		g.aliases[a] = unit
+	}
+
 	return nil
 }
 
-func newUnitGroupDefault() UnitGroup {
-	return UnitGroup{
+func newUnitGroupDefault() *UnitGroup {
+	return &UnitGroup{
 		units:    make(UnitsSlice, 0, 32),
 		baseUnit: Unit{},
 	}
 }
 
 func NewUnitGroup(unitsData io.Reader) (group *UnitGroup, err error) {
-	// TODO
-	group = &newUnitGroupDefault()
-	for _, err := range unit_entry.IterUnitEntries(unitsData) {
+	group = newUnitGroupDefault()
+	for entry, err := range unit_entry.IterUnitEntries(unitsData) {
 		if err != nil {
 			return group, fmt.Errorf("Error reading unit entry: %w", err)
+		}
+		if err := group.add(entry); err != nil {
+			return group, fmt.Errorf("Error adding unit entry %v: %w", entry, err)
 		}
 	}
 	return group, nil
@@ -54,7 +68,7 @@ type UnitRegistryFiles struct {
 	groups map[string]UnitGroup
 }
 
-func NewUnitRegistryFiles() (reg *UnitRegistryFiles, err error) {
+func NewUnitRegistryFiles() (registry *UnitRegistryFiles, err error) {
 	// TODO
-	return nil, nil
+	return registry, err
 }
