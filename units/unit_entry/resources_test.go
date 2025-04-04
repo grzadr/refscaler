@@ -2,8 +2,6 @@ package unit_entry
 
 import (
 	"encoding/json"
-	"path"
-	"testing/fstest"
 )
 
 var fixtureUnitEntriesStr = `
@@ -37,16 +35,16 @@ var fixtureUnitEntries = func() []UnitEntry {
 	return entries
 }()
 
-var testFSDirPath = "units"
+// var testFSDirPath = "units"
 
-var testFS = fstest.MapFS{
-	path.Join(testFSDirPath, "test_unit.json"): {
-		Data: []byte(fixtureUnitEntriesStr),
-	},
-	path.Join(testFSDirPath, "empty.json"): {
-		Data: []byte("{}"),
-	},
-	path.Join(testFSDirPath, "text.txt"): {
-		Data: []byte("FILE"),
-	},
-}
+// var testFS = fstest.MapFS{
+// 	path.Join(testFSDirPath, "test_unit.json"): {
+// 		Data: []byte(fixtureUnitEntriesStr),
+// 	},
+// 	path.Join(testFSDirPath, "empty.json"): {
+// 		Data: []byte("{}"),
+// 	},
+// 	path.Join(testFSDirPath, "text.txt"): {
+// 		Data: []byte("FILE"),
+// 	},
+// }

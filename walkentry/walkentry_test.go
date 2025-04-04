@@ -113,8 +113,18 @@ func TestWalkFS_NestedDirectories(t *testing.T) {
 	expected := []WalkEntry{
 		{Path: "dir1", Name: "dir1", IsDir: true},
 		{Path: "dir1/dir2", Name: "dir2", IsDir: true},
-		{Path: "dir1/dir2/file2.txt", Name: "file2", Ext: ".txt", IsRegular: true},
-		{Path: "dir1/dir2/file3.json", Name: "file3", Ext: ".json", IsRegular: true},
+		{
+			Path:      "dir1/dir2/file2.txt",
+			Name:      "file2",
+			Ext:       ".txt",
+			IsRegular: true,
+		},
+		{
+			Path:      "dir1/dir2/file3.json",
+			Name:      "file3",
+			Ext:       ".json",
+			IsRegular: true,
+		},
 		{Path: "dir1/file1.txt", Name: "file1", Ext: ".txt", IsRegular: true},
 	}
 
@@ -151,7 +161,10 @@ func TestWalkFS_NonexistentDirectory(t *testing.T) {
 
 	for entry, err := range it {
 		if err == nil {
-			t.Error("expected error for nonexistent directory, got entry:", entry)
+			t.Error(
+				"expected error for nonexistent directory, got entry:",
+				entry,
+			)
 		}
 		return // We only need to check the first iteration
 	}
@@ -336,7 +349,12 @@ func TestWalkEntry_isFileWithExt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.entry.isFileWithExt(tt.ext); got != tt.expected {
-				t.Errorf("WalkEntry.isFileWithExt(%q) = %v, want %v", tt.ext, got, tt.expected)
+				t.Errorf(
+					"WalkEntry.isFileWithExt(%q) = %v, want %v",
+					tt.ext,
+					got,
+					tt.expected,
+				)
 			}
 		})
 	}
@@ -394,7 +412,11 @@ func TestWalkEntry_isJSONFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.entry.IsJSONFile(); got != tt.expected {
-				t.Errorf("WalkEntry.isJSONFile() = %v, want %v", got, tt.expected)
+				t.Errorf(
+					"WalkEntry.isJSONFile() = %v, want %v",
+					got,
+					tt.expected,
+				)
 			}
 		})
 	}

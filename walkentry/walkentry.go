@@ -21,7 +21,8 @@ func (e *WalkEntry) isFile() bool {
 	return e.IsRegular
 }
 
-// isFileWithExt returns true if the entry is a file with the specified extension
+// isFileWithExt returns true if the entry is a file with the specified
+// extension
 func (e *WalkEntry) isFileWithExt(ext string) bool {
 	return e.isFile() && e.Ext == ext
 }
@@ -83,7 +84,10 @@ func (w *directoryWalker) walk(yield func(WalkEntry, error) bool) bool {
 }
 
 // processEntry handles a single directory entry
-func (w *directoryWalker) processEntry(entry fs.DirEntry, yield func(WalkEntry, error) bool) bool {
+func (w *directoryWalker) processEntry(
+	entry fs.DirEntry,
+	yield func(WalkEntry, error) bool,
+) bool {
 	// Create and yield the current entry
 	walkEntry := newWalkEntry(entry, w.root)
 	if !yield(walkEntry, nil) {
@@ -100,12 +104,16 @@ func (w *directoryWalker) processEntry(entry fs.DirEntry, yield func(WalkEntry, 
 }
 
 // walkSubdirectory handles recursive directory traversal
-func (w *directoryWalker) walkSubdirectory(subPath string, yield func(WalkEntry, error) bool) bool {
+func (w *directoryWalker) walkSubdirectory(
+	subPath string,
+	yield func(WalkEntry, error) bool,
+) bool {
 	subWalker := newDirectoryWalker(w.fsys, subPath)
 	return subWalker.walk(yield)
 }
 
-// walkFS returns an iterator that walks through the filesystem starting from root
+// walkFS returns an iterator that walks through the filesystem starting from
+// root
 func WalkFS(fsys fs.FS, root string) iter.Seq2[WalkEntry, error] {
 	return func(yield func(WalkEntry, error) bool) {
 		walker := newDirectoryWalker(fsys, root)

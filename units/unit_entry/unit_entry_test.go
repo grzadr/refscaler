@@ -7,8 +7,18 @@ import (
 	"testing"
 )
 
+func TestUnitEntry_IsBase(t *testing.T) {
+	if entry := (UnitEntry{Value: 1.0}); !entry.IsBase() {
+		t.Fatal("object UnitEntry with value 1.0 should be base")
+	}
+	if entry := (UnitEntry{Value: 0.0}); entry.IsBase() {
+		t.Fatal("object UnitEntry with value 0.0 should not be base")
+	}
+}
+
 func helpCompareUnitEntry(a, b *UnitEntry) bool {
-	if a.Name != b.Name || a.Value != b.Value || len(a.Aliases) != len(b.Aliases) {
+	if a.Name != b.Name || a.Value != b.Value ||
+		len(a.Aliases) != len(b.Aliases) {
 		return false
 	}
 
@@ -139,7 +149,11 @@ func TestIterUnitEntries_InvalidJSON(t *testing.T) {
 				t.Fatal("expected error, got nil")
 			}
 			if gotErr.Error() != tc.wantErr {
-				t.Errorf("expected error %q, got %q", tc.wantErr, gotErr.Error())
+				t.Errorf(
+					"expected error %q, got %q",
+					tc.wantErr,
+					gotErr.Error(),
+				)
 			}
 		})
 	}

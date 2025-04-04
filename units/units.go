@@ -24,13 +24,17 @@ type UnitGroup struct {
 	units   UnitsSlice
 	aliases UnitAliases
 	// allowPrefix bool // TODO
-	baseUnit Unit
+	baseUnit *Unit
 }
 
 func (g *UnitGroup) add(entry unit_entry.UnitEntry) error {
 	unit := &Unit{
 		name:       entry.Name,
 		multiplier: entry.Value,
+	}
+
+	if entry.IsBase() {
+		g.baseUnit = unit
 	}
 
 	g.units = append(g.units, unit)
@@ -58,11 +62,15 @@ func (g *UnitGroup) Get(alias string) (unit *Unit, ok bool) {
 	return
 }
 
+func (g *UnitGroup) Length() int {
+	return len(g.units)
+}
+
 func newUnitGroupDefault() *UnitGroup {
 	return &UnitGroup{
 		units:    make(UnitsSlice, 0, 32),
 		aliases:  make(UnitAliases, 128),
-		baseUnit: Unit{},
+		baseUnit: &Unit{},
 	}
 }
 
@@ -73,7 +81,11 @@ func NewUnitGroup(unitsData io.Reader) (group *UnitGroup, err error) {
 			return group, fmt.Errorf("error reading unit entry: %s", err)
 		}
 		if err := group.add(entry); err != nil {
-			return group, fmt.Errorf("error adding unit entry %v: %s", entry, err)
+			return group, fmt.Errorf(
+				"error adding unit entry %v: %s",
+				entry,
+				err,
+			)
 		}
 	}
 	return group, nil
@@ -86,12 +98,45 @@ type UnitRegistry interface {
 
 type UnitRegistryFiles map[string]*UnitGroup
 
+func NewUnitRegistryFilesDefault() UnitRegistryFiles {
+	// temp := make(UnitRegistryFiles, 16)
+	// return &temp
+	return make(UnitRegistryFiles, 16)
+}
+
+func (r *UnitRegistryFiles) Length() int {
+	return len(*r)
+}
+
 func (r *UnitRegistryFiles) Add(key string, group *UnitGroup) {
 	(*r)[key] = group
 }
 
-func NewUnitRegistryFiles(fsys fs.FS, dir_path string) (registry *UnitRegistryFiles, err error) {
-	*registry = make(UnitRegistryFiles)
+func loadUnitGroupFromJsonFile(
+	fsys fs.FS,
+	json_path string,
+) (group *UnitGroup, err error) {
+	file, err := fsys.Open(json_path)
+	if err != nil {
+		return group, err
+	}
+
+	defer func() {
+		closeErr := file.Close()
+		if err == nil && closeErr != nil {
+			err = closeErr
+		}
+	}()
+
+	group, err = NewUnitGroup(file)
+	return
+}
+
+func NewUnitRegistryFiles(
+	fsys fs.FS,
+	dir_path string,
+) (registry UnitRegistryFiles, err error) {
+	registry = NewUnitRegistryFilesDefault()
 
 	for walk_entry, err := range walkentry.WalkFS(fsys, dir_path) {
 		if err != nil {
@@ -102,24 +147,16 @@ func NewUnitRegistryFiles(fsys fs.FS, dir_path string) (registry *UnitRegistryFi
 			continue
 		}
 
-		file, err := fsys.Open(walk_entry.Path)
-		if err != nil {
-			return registry, err
-		}
-		
-		defer func() {
-			closeErr := file.Close()
-			if err == nil && closeErr != nil {
-				err = closeErr
-			}
-		}()
-
-		unit_entry, err := NewUnitGroup(file)
+		unit_group, err := loadUnitGroupFromJsonFile(fsys, walk_entry.Path)
 		if err != nil {
 			return registry, err
 		}
 
-		registry.Add(walk_entry.Name, unit_entry)
+		if unit_group == nil {
+			continue
+		}
+
+		registry.Add(walk_entry.Name, unit_group)
 	}
 
 	return registry, err

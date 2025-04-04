@@ -21,10 +21,18 @@ type Enlistment struct {
 	units     units.UnitsSlice
 }
 
+func NewEnlistmentDefault() *Enlistment {
+	return &Enlistment{
+		records: make(RecordSlice, 0, 32),
+	}
+}
+
 func NewEnlistment(
 	scale string,
 	records []string,
 	units units.UnitRegistry,
-) (*Enlistment, error) {
-	return nil, nil
+) (enlistment *Enlistment, err error) {
+	return NewEnlistmentDefault(), nil
 }
+
+
