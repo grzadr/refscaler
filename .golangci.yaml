@@ -11,8 +11,9 @@ formatters:
   settings:
     golines:
       # Shorten single-line comments.
+      max-len: 80
       shorten-comments: true
-      
+
     goimports:
       # A list of prefixes, which, if set, checks import paths
       # with the given prefixes are grouped after 3rd-party packages.

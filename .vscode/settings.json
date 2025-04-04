@@ -3,7 +3,7 @@
     "editor.formatOnSave": true,
     "editor.formatOnSaveMode": "file",
     "editor.rulers": [
-        100
+        80
     ],
     "editor.wordWrap": "off",
     "editor.renderWhitespace": "all",
