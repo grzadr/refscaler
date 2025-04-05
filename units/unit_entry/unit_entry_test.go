@@ -5,6 +5,7 @@ import (
 	// "encoding/json"
 	"strings"
 	"testing"
+	"github.com/grzadr/refscaler/internal"
 )
 
 func TestUnitEntry_IsBase(t *testing.T) {
@@ -16,7 +17,7 @@ func TestUnitEntry_IsBase(t *testing.T) {
 	}
 }
 
-func helpCompareUnitEntry(a, b *UnitEntry) bool {
+func helpCompareUnitEntry(a *UnitEntry, b *internal.TestUnitEntry) bool {
 	if a.Name != b.Name || a.Value != b.Value ||
 		len(a.Aliases) != len(b.Aliases) {
 		return false
@@ -32,18 +33,19 @@ func helpCompareUnitEntry(a, b *UnitEntry) bool {
 }
 
 func TestIterUnitEntries_Success(t *testing.T) {
-	reader := strings.NewReader(fixtureUnitEntriesStr)
+	reader := strings.NewReader(internal.GetFixtureUnitEntriesStr())
 	i := 0
+	entries := internal.GetFixtureTestUnitEntries()
 	for next, err := range IterUnitEntries(reader) {
 		if err != nil {
 			t.Fatalf("Received unexpected error %v", err)
 		}
 
-		if !helpCompareUnitEntry(&next, &fixtureUnitEntries[i]) {
+		if !helpCompareUnitEntry(&next, &entries[i]) {
 			t.Errorf(
 				"Entry %d: expected %+v, got %+v",
 				i,
-				fixtureUnitEntries[i],
+				entries[i],
 				next,
 			)
 		}
@@ -52,7 +54,7 @@ func TestIterUnitEntries_Success(t *testing.T) {
 }
 
 func TestIterUnitEntries_EarlyTermination(t *testing.T) {
-	reader := strings.NewReader(fixtureUnitEntriesStr)
+	reader := strings.NewReader(internal.GetFixtureUnitEntriesStr())
 	i := 0
 	for _, err := range IterUnitEntries(reader) {
 		if err != nil {
@@ -162,7 +164,7 @@ func TestIterUnitEntries_InvalidJSON(t *testing.T) {
 // Benchmark to ensure performance
 func BenchmarkIterUnitEntries(b *testing.B) {
 	for b.Loop() {
-		reader := strings.NewReader(fixtureUnitEntriesStr)
+		reader := strings.NewReader(internal.GetFixtureUnitEntriesStr())
 		for _, err := range IterUnitEntries(reader) {
 			if err != nil {
 				b.Fatal(err)
