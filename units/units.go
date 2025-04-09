@@ -92,7 +92,7 @@ func NewUnitGroup(unitsData io.Reader) (group *UnitGroup, err error) {
 }
 
 type UnitRegistry interface {
-	Find(unit string) (group *UnitGroup, ok bool)
+	Find(alias string) (group *UnitGroup, ok bool)
 	Add(key string, group UnitGroup) error
 }
 
@@ -111,6 +111,12 @@ func (r *UnitRegistryFiles) Length() int {
 func (r *UnitRegistryFiles) Add(key string, group *UnitGroup) {
 	(*r)[key] = group
 }
+
+func (r *UnitRegistryFiles) Find(alias string) (group *UnitGroup, ok bool) {
+	
+}
+
+
 
 func loadUnitGroupFromJsonFile(
 	fsys fs.FS,

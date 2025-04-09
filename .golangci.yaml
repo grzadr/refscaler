@@ -10,7 +10,6 @@ formatters:
     - golines
   settings:
     golines:
-      # Shorten single-line comments.
       max-len: 80
       shorten-comments: true
 
