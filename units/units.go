@@ -1,6 +1,7 @@
 package units
 
 import (
+	"embed"
 	"fmt"
 	"io"
 	"io/fs"
@@ -93,7 +94,7 @@ func NewUnitGroup(unitsData io.Reader) (group *UnitGroup, err error) {
 
 type UnitRegistry interface {
 	Find(alias string) (group *UnitGroup, ok bool)
-	Add(key string, group UnitGroup) error
+	Add(key string, group *UnitGroup)
 }
 
 type UnitRegistryFiles map[string]*UnitGroup
@@ -113,6 +114,7 @@ func (r *UnitRegistryFiles) Add(key string, group *UnitGroup) {
 }
 
 func (r *UnitRegistryFiles) Find(alias string) (group *UnitGroup, ok bool) {
+	return
 }
 
 func loadUnitGroupFromJsonFile(
@@ -163,4 +165,24 @@ func NewUnitRegistryFiles(
 	}
 
 	return registry, err
+}
+
+//go:embed units_db/*.json
+var unitsFS embed.FS
+
+const UNITS_PATH = "units_db"
+
+var EmbeddedUnitRegistry *UnitRegistryFiles = nil
+
+func newEmbeddedUnitRegistry() (registry UnitRegistryFiles, err error) {
+	return NewUnitRegistryFiles(unitsFS, UNITS_PATH)
+}
+
+func init() {
+	registry, err := newEmbeddedUnitRegistry()
+	if err != nil {
+		panic(err)
+	}
+
+	EmbeddedUnitRegistry = &registry
 }

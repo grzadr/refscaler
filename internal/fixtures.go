@@ -64,3 +64,46 @@ func GetFixtureTestFs() fstest.MapFS {
 		},
 	}
 }
+
+func GetFixtureEnlistmentFs() fstest.MapFS {
+	return fstest.MapFS{
+		"standard": {
+			Data: []byte(
+				`Item 1: 0.45 hour, 15 minutes
+				# Item X: 100 hours
+				Item 2: 15 minutes
+				Item 3: 60 seconds
+				`),
+		},
+		"unsorted": {
+			Data: []byte(
+				`Item 2: 15 minutes
+
+				Item 3: 60 seconds
+				Item 1: 1 hour
+				`),
+		},
+	}
+}
+
+type TestEnlistment struct {
+	Label string
+	Value float64
+}
+
+func GetFixtureEnlistmentExpected() []TestEnlistment {
+	return []TestEnlistment{
+		{
+			Label: "Item 1",
+			Value: 3600,
+		},
+		{
+			Label: "Item 2",
+			Value: 800,
+		},
+		{
+			Label: "Item 3",
+			Value: 60,
+		},
+	}
+}

@@ -4,38 +4,73 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/fs"
+	"slices"
 	"strconv"
 	"strings"
-	"io/fs"
+
 	"github.com/grzadr/refscaler/units"
 )
 
 type MeasureValue float64
 
-type EntryMeasure struct {
-	Unit  string
-	Value MeasureValue
-}
-
-func newEntryMeasure(str string) (measure EntryMeasure, err error) {
-	raw_value, unit, found := strings.Cut(strings.TrimSpace(str), " ")
-	raw_value = strings.TrimSpace(raw_value)
-	unit = strings.TrimSpace(unit)
-
-	if !found || len(raw_value) == 0 || len(unit) == 0 {
-		return measure, fmt.Errorf("measure '%s' has wrong format", str)
-	}
-
-	value, err := strconv.ParseFloat(raw_value, 64)
+func newMeasureValue(
+	value string,
+	unit_alias string,
+	group *units.UnitGroup,
+) (measure MeasureValue, err error) {
+	measure_value, err := strconv.ParseFloat(value, 64)
 	if err != nil {
 		return measure, fmt.Errorf(
 			"value '%s' cannot be parsed to float",
-			raw_value,
+			value,
 		)
 	}
 
+	unit, ok := group.Get(unit_alias)
+
+	if !ok {
+		return measure, fmt.Errorf(
+			"unit alias '%s' not found in group",
+			unit_alias,
+		)
+	}
+
+	measure = MeasureValue(measure_value * unit.Multiplier)
+	return
+}
+
+func newMeasureValueFromEntry(
+	entries []EntryMeasure,
+	group *units.UnitGroup,
+) (measure MeasureValue, err error) {
+	for _, entry := range entries {
+		measure_value, err := newMeasureValue(entry.Value, entry.Unit, group)
+		if err != nil {
+			return measure, err
+		}
+
+		measure += measure_value
+	}
+	return
+}
+
+type EntryMeasure struct {
+	Unit  string
+	Value string
+}
+
+func newEntryMeasure(str string) (measure EntryMeasure, err error) {
+	value, unit, found := strings.Cut(strings.TrimSpace(str), " ")
+	value = strings.TrimSpace(value)
+	unit = strings.TrimSpace(unit)
+
+	if !found || len(value) == 0 || len(unit) == 0 {
+		return measure, fmt.Errorf("measure '%s' has wrong format", str)
+	}
+
 	measure.Unit = unit
-	measure.Value = MeasureValue(value)
+	measure.Value = value
 
 	return
 }
@@ -107,25 +142,17 @@ func newRecord(
 	group *units.UnitGroup,
 ) (record Record, err error) {
 	record.label = entry.label
-	record.absValue = 1
 
-	for _, measure := range entry.measures {
-		unit, ok := group.Get(measure.Unit)
-
-		if !ok {
-			return record, fmt.Errorf(
-				"unit alias '%s' not found in group",
-				measure.Unit,
-			)
-		}
-
-		record.absValue *= measure.Value * MeasureValue(unit.Multiplier)
+	measure_value, err := newMeasureValueFromEntry(entry.measures, group)
+	if err != nil {
+		return record, err
 	}
+	record.absValue = measure_value
 
 	return
 }
 
-type RecordSlice []Record
+type RecordSlice []*Record
 
 type Enlistment struct {
 	records RecordSlice
@@ -133,6 +160,7 @@ type Enlistment struct {
 	// unitRef   string
 	ref *Record
 	// units     units.UnitsSlice
+	group *units.UnitGroup
 }
 
 func NewEnlistmentDefault() *Enlistment {
@@ -141,7 +169,25 @@ func NewEnlistmentDefault() *Enlistment {
 	}
 }
 
+func (e *Enlistment) sort() {
+	slices.SortFunc(e.records, func(a, b *Record) int {
+		if a.absValue > b.absValue {
+			return 1
+		} else if a.absValue < b.absValue {
+			return -1
+		} else {
+			return 0
+		}
+	})
+}
+
 func (e *Enlistment) addRecord(record Record) error {
+	e.records = append(e.records, &record)
+
+	if e.ref == nil || e.ref.absValue < record.absValue {
+		e.ref = &record
+	}
+
 	return nil
 }
 
@@ -190,6 +236,8 @@ func (e *Enlistment) loadFromReader(
 		return err
 	}
 
+	e.sort()
+
 	return nil
 }
 
@@ -208,7 +256,6 @@ func NewEnlistmentFromFile(
 	unit_files units.UnitRegistry,
 ) (enlistment *Enlistment, err error) {
 	file, err := fsys.Open(filename)
-
 	if err != nil {
 		return enlistment, err
 	}
