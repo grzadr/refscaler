@@ -41,5 +41,8 @@
     "[github-actions-workflow]": {
         "editor.detectIndentation": false,
         "editor.indentSize": 2
-    }
+    },
+    "cSpell.words": [
+        "fsys"
+    ]
 }
