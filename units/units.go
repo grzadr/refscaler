@@ -11,8 +11,8 @@ import (
 )
 
 type Unit struct {
-	name       string
-	multiplier float64
+	Name       string
+	Multiplier float64
 }
 
 type (
@@ -29,8 +29,8 @@ type UnitGroup struct {
 
 func (g *UnitGroup) add(entry unit_entry.UnitEntry) error {
 	unit := &Unit{
-		name:       entry.Name,
-		multiplier: entry.Value,
+		Name:       entry.Name,
+		Multiplier: entry.Value,
 	}
 
 	if entry.IsBase() {
@@ -38,16 +38,16 @@ func (g *UnitGroup) add(entry unit_entry.UnitEntry) error {
 	}
 
 	g.units = append(g.units, unit)
-	g.aliases[unit.name] = unit
+	g.aliases[unit.Name] = unit
 
 	for _, a := range entry.Aliases {
 		g.aliases[a] = unit
 	}
 
 	slices.SortFunc(g.units, func(a *Unit, b *Unit) int {
-		if a.multiplier < b.multiplier {
+		if a.Multiplier < b.Multiplier {
 			return -1
-		} else if a.multiplier > b.multiplier {
+		} else if a.Multiplier > b.Multiplier {
 			return 1
 		} else {
 			return 0
@@ -113,10 +113,7 @@ func (r *UnitRegistryFiles) Add(key string, group *UnitGroup) {
 }
 
 func (r *UnitRegistryFiles) Find(alias string) (group *UnitGroup, ok bool) {
-	
 }
-
-
 
 func loadUnitGroupFromJsonFile(
 	fsys fs.FS,

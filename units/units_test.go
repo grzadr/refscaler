@@ -35,12 +35,12 @@ func verifyGroupWithEntryRef(
 		)
 	}
 
-	if unit.multiplier != ref.Value {
+	if unit.Multiplier != ref.Value {
 		return fmt.Errorf(
 			"%s ref value %f differs from %f",
-			unit.name,
+			unit.Name,
 			ref.Value,
-			unit.multiplier,
+			unit.Multiplier,
 		)
 	}
 
@@ -50,7 +50,7 @@ func verifyGroupWithEntryRef(
 			return fmt.Errorf(
 				"alias %s for %s not present in UnitGroup aliases %s",
 				alias,
-				unit.name,
+				unit.Name,
 				mapKeysToString(group.aliases),
 			)
 		}
@@ -58,7 +58,7 @@ func verifyGroupWithEntryRef(
 		if unit != aliased_unit {
 			return fmt.Errorf(
 				"%s unit aliased as %s points to different instance",
-				unit.name, alias,
+				unit.Name, alias,
 			)
 		}
 	}

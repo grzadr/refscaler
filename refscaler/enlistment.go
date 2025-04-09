@@ -4,8 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
-
+	"io/fs"
 	"github.com/grzadr/refscaler/units"
 )
 
@@ -17,10 +18,25 @@ type EntryMeasure struct {
 }
 
 func newEntryMeasure(str string) (measure EntryMeasure, err error) {
-	value, unit, found := strings.Cut(strings.TrimSpace(str), " ")
+	raw_value, unit, found := strings.Cut(strings.TrimSpace(str), " ")
+	raw_value = strings.TrimSpace(raw_value)
+	unit = strings.TrimSpace(unit)
 
-	if !found || len(value) == 0 || len(unit) == 0 {
+	if !found || len(raw_value) == 0 || len(unit) == 0 {
+		return measure, fmt.Errorf("measure '%s' has wrong format", str)
 	}
+
+	value, err := strconv.ParseFloat(raw_value, 64)
+	if err != nil {
+		return measure, fmt.Errorf(
+			"value '%s' cannot be parsed to float",
+			raw_value,
+		)
+	}
+
+	measure.Unit = unit
+	measure.Value = MeasureValue(value)
+
 	return
 }
 
@@ -67,6 +83,12 @@ func newEntry(line string) (entry *Entry, err error) {
 		return entry, fmt.Errorf("line `%s` missing `: ` separator", line)
 	}
 
+	label = strings.TrimSpace(label)
+
+	if len(label) == 0 {
+		return entry, fmt.Errorf("line `%s` contains empty label", line)
+	}
+
 	entry.label = label
 	if err := entry.loadMeasures(measures); err != nil {
 		return entry, err
@@ -84,6 +106,23 @@ func newRecord(
 	entry Entry,
 	group *units.UnitGroup,
 ) (record Record, err error) {
+	record.label = entry.label
+	record.absValue = 1
+
+	for _, measure := range entry.measures {
+		unit, ok := group.Get(measure.Unit)
+
+		if !ok {
+			return record, fmt.Errorf(
+				"unit alias '%s' not found in group",
+				measure.Unit,
+			)
+		}
+
+		record.absValue *= measure.Value * MeasureValue(unit.Multiplier)
+	}
+
+	return
 }
 
 type RecordSlice []Record
@@ -133,7 +172,7 @@ func (e *Enlistment) loadFromReader(
 			group, ok = registry.Find(alias)
 
 			if !ok {
-				return fmt.Errorf("alias '%s' in %s not found", alias, line)
+				return fmt.Errorf("alias '%s' from %s not found", alias, line)
 			}
 		}
 
@@ -161,4 +200,19 @@ func NewEnlistment(
 	enlistment = NewEnlistmentDefault()
 	err = enlistment.loadFromReader(reader, units)
 	return enlistment, err
+}
+
+func NewEnlistmentFromFile(
+	fsys fs.FS,
+	filename string,
+	unit_files units.UnitRegistry,
+) (enlistment *Enlistment, err error) {
+	file, err := fsys.Open(filename)
+
+	if err != nil {
+		return enlistment, err
+	}
+	defer file.Close()
+
+	return NewEnlistment(file, unit_files)
 }
