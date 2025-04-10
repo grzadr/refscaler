@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"iter"
 	"slices"
 	"strconv"
 	"strings"
@@ -12,122 +13,158 @@ import (
 	"github.com/grzadr/refscaler/units"
 )
 
-type MeasureValue float64
+type RawMeasure struct {
+	value float64
+	alias string
+}
 
-func newMeasureValue(
-	value string,
-	unit_alias string,
-	group *units.UnitGroup,
-) (measure MeasureValue, err error) {
-	measure_value, err := strconv.ParseFloat(value, 64)
+func newRawMeasure(raw string) (rawMeasure RawMeasure, err error) {
+	value, alias, found := strings.Cut(strings.TrimSpace(raw), " ")
+
+	if !found {
+		return RawMeasure{}, fmt.Errorf("raw measure '%s' is malformed", raw)
+	}
+
+	if len(value) == 0 {
+		return RawMeasure{}, fmt.Errorf(
+			"raw measure '%s' missing value",
+			raw,
+		)
+	}
+
+	if len(alias) == 0 {
+		return RawMeasure{}, fmt.Errorf(
+			"raw measure '%s' missing unit alias",
+			raw,
+		)
+	}
+
+	numValue, err := strconv.ParseFloat(value, 64)
 	if err != nil {
-		return measure, fmt.Errorf(
-			"value '%s' cannot be parsed to float",
-			value,
+		return RawMeasure{}, fmt.Errorf(
+			"raw measure '%s' value failed to be parsed: %w",
+			raw,
+			err,
 		)
 	}
 
-	unit, ok := group.Get(unit_alias)
+	rawMeasure.value = numValue
+	rawMeasure.alias = alias
 
-	if !ok {
-		return measure, fmt.Errorf(
-			"unit alias '%s' not found in group",
-			unit_alias,
-		)
-	}
-
-	measure = MeasureValue(measure_value * unit.Multiplier)
 	return
 }
 
-func newMeasureValueFromEntry(
-	entries []EntryMeasure,
-	group *units.UnitGroup,
-) (measure MeasureValue, err error) {
-	for _, entry := range entries {
-		measure_value, err := newMeasureValue(entry.Value, entry.Unit, group)
+type RawMeasureSlice []RawMeasure
+
+func newRawMeasureSlice(measures string) (rawSlice RawMeasureSlice, err error) {
+	rawMeasures := strings.Split(measures, ",")
+
+	if len(rawMeasures) == 0 {
+		return rawSlice, fmt.Errorf("measures are empty")
+	}
+
+	rawSlice = make(RawMeasureSlice, 0, len(rawMeasures))
+
+	for _, r := range rawMeasures {
+		raw, err := newRawMeasure(r)
 		if err != nil {
-			return measure, err
+			return nil, err
 		}
 
-		measure += measure_value
+		rawSlice = append(rawSlice, raw)
 	}
+
 	return
 }
 
-type EntryMeasure struct {
-	Unit  string
-	Value string
+func (r *RawMeasureSlice) getFirstUnitLabel() string {
+	return (*r)[0].alias
 }
 
-func newEntryMeasure(str string) (measure EntryMeasure, err error) {
-	value, unit, found := strings.Cut(strings.TrimSpace(str), " ")
-	value = strings.TrimSpace(value)
-	unit = strings.TrimSpace(unit)
+type MeasureValue float64
 
-	if !found || len(value) == 0 || len(unit) == 0 {
-		return measure, fmt.Errorf("measure '%s' has wrong format", str)
+func newMeasureFromSlice(
+	measures RawMeasureSlice,
+	group *units.UnitGroup,
+) (measure MeasureValue, err error) {
+	for _, raw := range measures {
+		unit, ok := group.Get(raw.alias)
+
+		if !ok {
+			return measure, fmt.Errorf(
+				"alias '%s' not found",
+				raw.alias,
+			)
+		}
+
+		measure += MeasureValue(raw.value * unit.Multiplier)
 	}
 
-	measure.Unit = unit
-	measure.Value = value
+	if measure == 0 {
+		return 0, fmt.Errorf("value cannot equal 0")
+	}
+
+	return
+}
+
+func newMeasureValue(
+	measures string,
+	group *units.UnitGroup,
+) (measure MeasureValue, err error) {
+	rawMeasures, err := newRawMeasureSlice(measures)
+	if err != nil {
+		return 0, fmt.Errorf(
+			"failed to create measure value from '%s': %w",
+			measures,
+			err,
+		)
+	}
+
+	measure, err = newMeasureFromSlice(rawMeasures, group)
+	if err != nil {
+		return 0, fmt.Errorf(
+			"failed to create measure value from '%s': %w",
+			measures,
+			err,
+		)
+	}
 
 	return
 }
 
 type Entry struct {
 	label    string
-	measures []EntryMeasure
+	measures string
+	line     string
 }
 
-func (e *Entry) getFirstUnit() string {
-	return e.measures[0].Unit
-}
-
-func newDefaultEntry() *Entry {
-	return &Entry{
-		measures: make([]EntryMeasure, 4),
-	}
-}
-
-func (e *Entry) loadMeasures(str string) error {
-	measures_query := strings.Split(str, ",")
-
-	if len(measures_query) == 0 {
-		return fmt.Errorf("no measures detected")
-	}
-
-	for _, query := range measures_query {
-		measure, err := newEntryMeasure(query)
-		if err != nil {
-			return err
-		}
-
-		e.measures = append(e.measures, measure)
-	}
-
-	return nil
-}
-
-func newEntry(line string) (entry *Entry, err error) {
-	entry = newDefaultEntry()
-
+func splitEntryLine(line string) (label, measures string, err error) {
 	label, measures, found := strings.Cut(line, ": ")
 
 	if !found {
-		return entry, fmt.Errorf("line `%s` missing `: ` separator", line)
+		return "", "", fmt.Errorf("line '%s' missing ': ' separator", line)
 	}
 
-	label = strings.TrimSpace(label)
-
 	if len(label) == 0 {
-		return entry, fmt.Errorf("line `%s` contains empty label", line)
+		return "", "", fmt.Errorf("line '%s' missing label", line)
+	}
+
+	if len(measures) == 0 {
+		return "", "", fmt.Errorf("line '%s' missing value", line)
+	}
+
+	return
+}
+
+func newEntry(line string) (entry Entry, err error) {
+	label, measures, err := splitEntryLine(line)
+	if err != nil {
+		return Entry{}, fmt.Errorf("malformed line '%s': %w", line, err)
 	}
 
 	entry.label = label
-	if err := entry.loadMeasures(measures); err != nil {
-		return entry, err
-	}
+	entry.measures = measures
+	entry.line = line
 
 	return
 }
@@ -143,7 +180,7 @@ func newRecord(
 ) (record Record, err error) {
 	record.label = entry.label
 
-	measure_value, err := newMeasureValueFromEntry(entry.measures, group)
+	measure_value, err := newMeasureValue(entry.measures, group)
 	if err != nil {
 		return record, err
 	}
@@ -181,7 +218,12 @@ func (e *Enlistment) sort() {
 	})
 }
 
-func (e *Enlistment) addRecord(record Record) error {
+func (e *Enlistment) addRecord(entry Entry) error {
+	record, err := newRecord(entry, e.group)
+	if err != nil {
+		return err
+	}
+
 	e.records = append(e.records, &record)
 
 	if e.ref == nil || e.ref.absValue < record.absValue {
@@ -193,42 +235,91 @@ func (e *Enlistment) addRecord(record Record) error {
 
 const CommentPrefix = "#"
 
+func iterLines(scanner *bufio.Scanner) iter.Seq2[Entry, error] {
+	return func(yield func(Entry, error) bool) {
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if len(line) == 0 || strings.HasPrefix(line, CommentPrefix) {
+				continue
+			}
+			entry, err := newEntry(line)
+
+			if err != nil && !yield(Entry{}, err) {
+				return
+			}
+			if !yield(entry, nil) {
+				return
+			}
+		}
+	}
+}
+
+func determineUnitGroup(
+	entry Entry,
+	registry units.UnitRegistry,
+) (group *units.UnitGroup, err error) {
+	measures, err := newRawMeasureSlice(entry.measures)
+	if err != nil {
+		return nil, err
+	}
+
+	alias := measures.getFirstUnitLabel()
+
+	group, ok := registry.Find(alias)
+
+	if !ok {
+		return nil, fmt.Errorf(
+			"failed to determine unit group for alias '%s'",
+			alias,
+		)
+	}
+
+	return
+}
+
 func (e *Enlistment) loadFromReader(
 	reader io.Reader,
 	registry units.UnitRegistry,
 ) error {
 	scanner := bufio.NewScanner(reader)
 
-	var group *units.UnitGroup = nil
+	var entry Entry
+	var err error
 	var ok bool
 
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if len(line) == 0 || strings.HasPrefix(line, CommentPrefix) {
-			continue
+	next, stop := iter.Pull2(iterLines(scanner))
+	defer stop()
+
+	entry, err, ok = next()
+
+	if !ok {
+		return fmt.Errorf("enlistment is empty")
+	}
+
+	if err != nil {
+		return err
+	}
+
+	group, err := determineUnitGroup(entry, registry)
+	if err != nil {
+		return err
+	}
+
+	e.group = group
+
+	for {
+		entry, err, ok = next()
+
+		if !ok {
+			break
 		}
 
-		entry, err := newEntry(line)
 		if err != nil {
 			return err
 		}
 
-		if group == nil {
-			alias := entry.getFirstUnit()
-			group, ok = registry.Find(alias)
-
-			if !ok {
-				return fmt.Errorf("alias '%s' from %s not found", alias, line)
-			}
-		}
-
-		record, err := newRecord(*entry, group)
-		if err != nil {
-			return err
-		}
-
-		if err := e.addRecord(record); err != nil {
-			return err
+		if err := e.addRecord(entry); err != nil {
+			return fmt.Errorf("failed to add entry '%s': %w", entry.line, err)
 		}
 	}
 
