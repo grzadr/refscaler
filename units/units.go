@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"slices"
+	"maps"
 
 	"github.com/grzadr/refscaler/units/unit_entry"
 	"github.com/grzadr/refscaler/walkentry"
@@ -114,7 +115,15 @@ func (r *UnitRegistryFiles) Add(key string, group *UnitGroup) {
 }
 
 func (r *UnitRegistryFiles) Find(alias string) (group *UnitGroup, ok bool) {
-	return
+	for group = range maps.Values(*r) {
+		_, ok = group.Get(alias)
+
+		if ok {
+			return
+		}
+	}
+
+	return nil, false
 }
 
 func loadUnitGroupFromJsonFile(

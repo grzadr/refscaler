@@ -307,6 +307,10 @@ func (e *Enlistment) loadFromReader(
 
 	e.group = group
 
+	if err := e.addRecord(entry); err != nil {
+		return fmt.Errorf("failed to add entry '%s': %w", entry.line, err)
+	}
+
 	for {
 		entry, err, ok = next()
 
