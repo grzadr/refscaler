@@ -193,10 +193,7 @@ type RecordSlice []*Record
 
 type Enlistment struct {
 	records RecordSlice
-	// scale     MeasureValue
-	// unitRef   string
 	ref *Record
-	// units     units.UnitsSlice
 	group *units.UnitGroup
 }
 
@@ -354,7 +351,12 @@ func NewEnlistmentFromFile(
 	if err != nil {
 		return enlistment, err
 	}
-	defer file.Close()
+	defer func() {
+		closeErr := file.Close()
+		if err == nil && closeErr != nil {
+			err = closeErr
+		}
+	}()
 
 	return NewEnlistment(file, unit_files)
 }

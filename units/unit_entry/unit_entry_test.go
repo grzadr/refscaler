@@ -1,10 +1,11 @@
 package unit_entry
 
 import (
-	// "bytes"
-	// "encoding/json"
 	"strings"
 	"testing"
+
+	// "bytes"
+	// "encoding/json"
 	"github.com/grzadr/refscaler/internal"
 )
 

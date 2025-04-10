@@ -69,7 +69,7 @@ func GetFixtureEnlistmentFs() fstest.MapFS {
 	return fstest.MapFS{
 		"standard": {
 			Data: []byte(
-				`Item 1: 0.45 hour, 15 minutes
+				`Item 1: 0.75 hour, 15 minutes
 				# Item X: 100 hours
 				Item 2: 15 minutes
 				Item 3: 60 seconds
@@ -99,7 +99,7 @@ func GetFixtureEnlistmentExpected() []TestEnlistment {
 		},
 		{
 			Label: "Item 2",
-			Value: 800,
+			Value: 900,
 		},
 		{
 			Label: "Item 3",

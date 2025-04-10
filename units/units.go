@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"slices"
 	"maps"
+	"slices"
 
 	"github.com/grzadr/refscaler/units/unit_entry"
 	"github.com/grzadr/refscaler/walkentry"
@@ -101,8 +101,6 @@ type UnitRegistry interface {
 type UnitRegistryFiles map[string]*UnitGroup
 
 func NewUnitRegistryFilesDefault() UnitRegistryFiles {
-	// temp := make(UnitRegistryFiles, 16)
-	// return &temp
 	return make(UnitRegistryFiles, 16)
 }
 

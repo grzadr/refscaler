@@ -24,6 +24,12 @@ func helperCompareEnlistments(
 
 	for exp, rec := range internal.IterZip(expected, enlistment.records) {
 		if rec.absValue != MeasureValue(exp.Value) {
+			return fmt.Errorf(
+				"expected value %f, got %f for record %d",
+				exp.Value,
+				rec.absValue,
+				i,
+			)
 		}
 
 		if rec.label != exp.Label {
