@@ -2,4 +2,12 @@
 
 ## Basics
 
-1. Implement Enlistment
+1. Implement Enlistment - DONE
+2. Implement Scale logic
+3. Implement Unit formatting
+4. Achieve 90% test coverage
+5. Implement CLI
+
+## Nice to Have
+
+1. Implement support for scientific prefixes like kilo, micro, etc.
