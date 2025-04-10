@@ -191,6 +191,25 @@ func newRecord(
 
 type RecordSlice []*Record
 
+func (r *RecordSlice) GetScaledRecords(
+	scale MeasureValue,
+	ref *Record,
+) (records RecordSlice, scaled_ref *Record) {
+	records = make(RecordSlice, 0, len(*r))
+
+	for _, rec := range *r {
+		scaled_rec := &Record{
+			label:    rec.label,
+			absValue: rec.absValue / ref.absValue * scale,
+		}
+		records = append(records, scaled_rec)
+		if rec == ref {
+			scaled_ref = scaled_rec
+		}
+	}
+	return records, scaled_ref
+}
+
 type Enlistment struct {
 	records RecordSlice
 	ref     *Record
@@ -358,4 +377,14 @@ func NewEnlistmentFromFile(
 	}()
 
 	return NewEnlistment(file, unit_files)
+}
+
+func (e *Enlistment) GetScaled(scale MeasureValue) *Enlistment {
+	records, ref := e.records.GetScaledRecords(scale, e.ref)
+
+	return &Enlistment{
+		records: records,
+		ref:     ref,
+		group:   e.group,
+	}
 }
