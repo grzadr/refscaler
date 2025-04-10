@@ -44,7 +44,7 @@ func helperCompareEnlistments(
 func TestNewEnlistmentFromFile(t *testing.T) {
 	expected := internal.GetFixtureEnlistmentExpected()
 
-	for _, filename := range []string{"standard", "unordered"} {
+	for _, filename := range []string{"standard", "unsorted"} {
 		enlistment, err := NewEnlistmentFromFile(
 			internal.GetFixtureEnlistmentFs(),
 			filename,

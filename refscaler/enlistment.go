@@ -209,9 +209,9 @@ func NewEnlistmentDefault() *Enlistment {
 func (e *Enlistment) sort() {
 	slices.SortFunc(e.records, func(a, b *Record) int {
 		if a.absValue > b.absValue {
-			return 1
-		} else if a.absValue < b.absValue {
 			return -1
+		} else if a.absValue < b.absValue {
+			return 1
 		} else {
 			return 0
 		}
