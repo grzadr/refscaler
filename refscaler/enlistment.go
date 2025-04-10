@@ -193,8 +193,8 @@ type RecordSlice []*Record
 
 type Enlistment struct {
 	records RecordSlice
-	ref *Record
-	group *units.UnitGroup
+	ref     *Record
+	group   *units.UnitGroup
 }
 
 func NewEnlistmentDefault() *Enlistment {
@@ -251,13 +251,13 @@ func iterLines(scanner *bufio.Scanner) iter.Seq2[Entry, error] {
 	}
 }
 
-func determineUnitGroup(
+func (e *Enlistment) determineUnitGroup(
 	entry Entry,
 	registry units.UnitRegistry,
-) (group *units.UnitGroup, err error) {
+) error {
 	measures, err := newRawMeasureSlice(entry.measures)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	alias := measures.getFirstUnitLabel()
@@ -265,13 +265,19 @@ func determineUnitGroup(
 	group, ok := registry.Find(alias)
 
 	if !ok {
-		return nil, fmt.Errorf(
+		return fmt.Errorf(
 			"failed to determine unit group for alias '%s'",
 			alias,
 		)
 	}
 
-	return
+	e.group = group
+
+	if err := e.addRecord(entry); err != nil {
+		return fmt.Errorf("failed to add entry '%s': %w", entry.line, err)
+	}
+
+	return nil
 }
 
 func (e *Enlistment) loadFromReader(
@@ -297,15 +303,8 @@ func (e *Enlistment) loadFromReader(
 		return err
 	}
 
-	group, err := determineUnitGroup(entry, registry)
-	if err != nil {
+	if err := e.determineUnitGroup(entry, registry); err != nil {
 		return err
-	}
-
-	e.group = group
-
-	if err := e.addRecord(entry); err != nil {
-		return fmt.Errorf("failed to add entry '%s': %w", entry.line, err)
 	}
 
 	for {
