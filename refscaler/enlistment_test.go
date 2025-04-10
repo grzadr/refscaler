@@ -38,6 +38,14 @@ func helperCompareEnlistments(
 		i++
 	}
 
+	if enlistment.ref != enlistment.records[0] {
+		return fmt.Errorf(
+			"reference set to %+v instead of %+v",
+			enlistment.ref,
+			enlistment.records[0],
+		)
+	}
+
 	return nil
 }
 
