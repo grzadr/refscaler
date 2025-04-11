@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"iter"
 	"maps"
 	"slices"
 
@@ -26,17 +27,13 @@ type UnitGroup struct {
 	units   UnitsSlice
 	aliases UnitAliases
 	// allowPrefix bool // TODO
-	baseUnit *Unit
+	// baseUnit *Unit
 }
 
 func (g *UnitGroup) add(entry unit_entry.UnitEntry) error {
 	unit := &Unit{
 		Name:       entry.Name,
 		Multiplier: entry.Value,
-	}
-
-	if entry.IsBase() {
-		g.baseUnit = unit
 	}
 
 	g.units = append(g.units, unit)
@@ -64,6 +61,16 @@ func (g *UnitGroup) Get(alias string) (unit *Unit, ok bool) {
 	return
 }
 
+func (g *UnitGroup) IterBackward() iter.Seq[*Unit] {
+	return func(yield func(*Unit) bool ){
+		for _, u := range slices.Backward(g.units) {
+			if !yield(u) {
+				return
+			}
+		}
+	}
+}
+
 func (g *UnitGroup) Length() int {
 	return len(g.units)
 }
@@ -72,7 +79,7 @@ func newUnitGroupDefault() *UnitGroup {
 	return &UnitGroup{
 		units:    make(UnitsSlice, 0, 32),
 		aliases:  make(UnitAliases, 128),
-		baseUnit: &Unit{},
+		// baseUnit: &Unit{},
 	}
 }
 

@@ -73,3 +73,44 @@ func TestNewEnlistmentFromFile(t *testing.T) {
 		}
 	}
 }
+
+func TestEnlistmentGetScaled(t *testing.T) {
+	enlistment, _ := NewEnlistmentFromFile(
+		internal.GetFixtureEnlistmentFs(),
+		"standard",
+		units.EmbeddedUnitRegistry,
+	)
+
+	for _, item := range internal.GetFixtureScaledEnlistmentExpected() {
+		scale, err := enlistment.MakeMeasureValue(item.Scale)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		scaled := enlistment.GetScaled(scale)
+
+		if err := helperCompareEnlistments(item.Expected, scaled); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestEnlistmentToString(t *testing.T) {
+	enlistment, _ := NewEnlistmentFromFile(
+		internal.GetFixtureEnlistmentFs(),
+		"standard",
+		units.EmbeddedUnitRegistry,
+	)
+
+	scale, _ := enlistment.MakeMeasureValue("1 year")
+
+	scaled := enlistment.GetScaled(scale)
+
+	str := scaled.ToString(3)
+
+	for exp, res := range internal.IterZip(internal.GetFixtureScaledEnslistmentToString(), str) {
+		if exp != res {
+			t.Fatalf("expected '%s' got '%s'", exp, res)
+		}
+	}
+}

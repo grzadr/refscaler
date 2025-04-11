@@ -107,3 +107,55 @@ func GetFixtureEnlistmentExpected() []TestEnlistment {
 		},
 	}
 }
+
+type TestScaledEnlistment struct {
+	Scale    string
+	Expected []TestEnlistment
+}
+
+func GetFixtureScaledEnlistmentExpected() []TestScaledEnlistment {
+	return []TestScaledEnlistment{
+		{
+			Scale: "23 hours, 60 minutes",
+			Expected: []TestEnlistment{
+				{
+					Label: "Item 1",
+					Value: 86_400,
+				},
+				{
+					Label: "Item 2",
+					Value: 21_600,
+				},
+				{
+					Label: "Item 3",
+					Value: 1440,
+				},
+			},
+		},
+		{
+			Scale: "1 year",
+			Expected: []TestEnlistment{
+				{
+					Label: "Item 1",
+					Value: 31_536_000,
+				},
+				{
+					Label: "Item 2",
+					Value: 7_884_000,
+				},
+				{
+					Label: "Item 3",
+					Value: 525_600,
+				},
+			},
+		},
+	}
+}
+
+func GetFixtureScaledEnslistmentToString() []string {
+	return []string{
+		"Item 1: 1 year",
+		"Item 2: 3 month, 1 day, 6.00 hour",
+		"Item 3: 6 day, 2 hour",
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"iter"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -82,6 +83,39 @@ func (r *RawMeasureSlice) getFirstUnitLabel() string {
 }
 
 type MeasureValue float64
+
+func (m *MeasureValue) toString(num_units int, units units.UnitsSlice) string {
+	result := make([]string, 0, num_units)
+
+	used_units := 0
+	leftover := float64(*m)
+
+	for _, unit := range units {
+		if leftover == 0.0 {
+			break
+		}
+
+		div := leftover / unit.Multiplier
+
+		part := math.Floor(div)
+		if part <= 0.0 {
+			continue
+		}
+
+		used_units++
+
+		if used_units == num_units {
+			result = append(result, fmt.Sprintf("%.02f %s", div, unit.Name))
+			break
+		}
+
+		leftover = leftover - (part * unit.Multiplier)
+
+		result = append(result, fmt.Sprintf("%d %s", int(part), unit.Name))
+	}
+
+	return strings.Join(result, ", ")
+}
 
 func newMeasureFromSlice(
 	measures RawMeasureSlice,
@@ -174,6 +208,10 @@ type Record struct {
 	absValue MeasureValue
 }
 
+func (r *Record) toString(num_units int, units units.UnitsSlice) string {
+	return fmt.Sprintf("%s: %s", r.label, r.absValue.toString(num_units, units))
+}
+
 func newRecord(
 	entry Entry,
 	group *units.UnitGroup,
@@ -208,6 +246,34 @@ func (r *RecordSlice) GetScaledRecords(
 		}
 	}
 	return records, scaled_ref
+}
+
+func (r *RecordSlice) prepareUnitsSlice(
+	group *units.UnitGroup,
+) units.UnitsSlice {
+	slice := make(units.UnitsSlice, 0, group.Length())
+	max := float64((*r)[0].absValue)
+
+	for u := range group.IterBackward() {
+		if u.Multiplier > max {
+			continue
+		}
+
+		slice = append(slice, u)
+	}
+
+	return slice
+}
+
+func (r *RecordSlice) toString(num_units int, group *units.UnitGroup) []string {
+	result := make([]string, 0, len(*r))
+
+	units := r.prepareUnitsSlice(group)
+
+	for _, rec := range *r {
+		result = append(result, rec.toString(num_units, units))
+	}
+	return result
 }
 
 type Enlistment struct {
@@ -379,6 +445,15 @@ func NewEnlistmentFromFile(
 	return NewEnlistment(file, unit_files)
 }
 
+func (e *Enlistment) MakeMeasureValue(measure string) (MeasureValue, error) {
+	value, err := newMeasureValue(measure, e.group)
+	if err != nil {
+		return 0, err
+	}
+
+	return value, nil
+}
+
 func (e *Enlistment) GetScaled(scale MeasureValue) *Enlistment {
 	records, ref := e.records.GetScaledRecords(scale, e.ref)
 
@@ -387,4 +462,8 @@ func (e *Enlistment) GetScaled(scale MeasureValue) *Enlistment {
 		ref:     ref,
 		group:   e.group,
 	}
+}
+
+func (e *Enlistment) ToString(num_units int) []string {
+	return e.records.toString(num_units, e.group)
 }
