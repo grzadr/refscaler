@@ -62,7 +62,7 @@ func (g *UnitGroup) Get(alias string) (unit *Unit, ok bool) {
 }
 
 func (g *UnitGroup) IterBackward() iter.Seq[*Unit] {
-	return func(yield func(*Unit) bool ){
+	return func(yield func(*Unit) bool) {
 		for _, u := range slices.Backward(g.units) {
 			if !yield(u) {
 				return
@@ -77,8 +77,8 @@ func (g *UnitGroup) Length() int {
 
 func newUnitGroupDefault() *UnitGroup {
 	return &UnitGroup{
-		units:    make(UnitsSlice, 0, 32),
-		aliases:  make(UnitAliases, 128),
+		units:   make(UnitsSlice, 0, 32),
+		aliases: make(UnitAliases, 128),
 		// baseUnit: &Unit{},
 	}
 }
