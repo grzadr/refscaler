@@ -82,22 +82,25 @@ type UnitJSON struct {
 	Aliases []string `json:"aliases"`
 }
 
+func (u *UnitJSON) AddAlias(alias string) {
+	u.Aliases = append(u.Aliases, alias)
+}
+
 type UnitGroupJSON []UnitJSON
 
-func (g *UnitGroup) JSONSerialize() UnitGroupJSON {
+func (g *UnitGroup) Serialize() UnitGroupJSON {
 	json_units := make(UnitGroupJSON, 0, g.Length())
-	visited_units := make(map[string]int, g.Length())
-	current_idx := 0
+	visited_units := make(map[string]*UnitJSON, g.Length())
 
 	for _, unit := range g.units {
-		json_units = append(json_units, UnitJSON{
+		temp := UnitJSON{
 			Name:    unit.Name,
 			Value:   unit.Multiplier,
 			Aliases: make([]string, 0, 4),
-		})
+		}
+		json_units = append(json_units, temp)
 
-		visited_units[unit.Name] = current_idx
-		current_idx++
+		visited_units[unit.Name] = &json_units[len(json_units)-1]
 	}
 
 	for alias, unit := range g.aliases {
@@ -106,12 +109,12 @@ func (g *UnitGroup) JSONSerialize() UnitGroupJSON {
 		if alias == unit.Name {
 			continue
 		}
-		idx := visited_units[name]
 
-		json_unit := json_units[idx]
+		visited_units[name].AddAlias(alias)
+	}
 
-		json_unit.Aliases = append(json_unit.Aliases, alias)
-		json_units[idx] = json_unit
+	for i := range json_units {
+		slices.Sort(json_units[i].Aliases)
 	}
 
 	return json_units
@@ -141,9 +144,12 @@ func NewUnitGroup(unitsData io.Reader) (group *UnitGroup, err error) {
 	return group, nil
 }
 
+type UnitRegistryJSON map[string]UnitGroupJSON
+
 type UnitRegistry interface {
 	Find(alias string) (group *UnitGroup, ok bool)
 	Add(key string, group *UnitGroup)
+	Serialize() UnitRegistryJSON
 	ToJSON() (string, error)
 }
 
@@ -173,16 +179,18 @@ func (r *UnitRegistryFiles) Find(alias string) (group *UnitGroup, ok bool) {
 	return nil, false
 }
 
-func (r *UnitRegistryFiles) ToJSON() (string, error) {
-	json_registry := make(map[string]UnitGroupJSON, len(*r))
+func (r *UnitRegistryFiles) Serialize() UnitRegistryJSON {
+	serialized := make(map[string]UnitGroupJSON, len(*r))
 
 	for name, group := range *r {
-		json_registry[name] = group.JSONSerialize()
+		serialized[name] = group.Serialize()
 	}
 
+	return serialized
+}
 
-	str, err := json.MarshalIndent(json_registry, "", "  ")
-
+func (r *UnitRegistryFiles) ToJSON() (string, error) {
+	str, err := json.MarshalIndent(r.Serialize(), "", "  ")
 	if err != nil {
 		return "", err
 	}
@@ -245,7 +253,10 @@ var unitsFS embed.FS
 
 const UNITS_PATH = "units_db"
 
-var EmbeddedUnitRegistry *UnitRegistryFiles = nil
+var (
+	EmbeddedUnitRegistry     *UnitRegistryFiles = nil
+	EmbeddedUnitRegistryJSON                    = ""
+)
 
 func newEmbeddedUnitRegistry() (registry UnitRegistryFiles, err error) {
 	return NewUnitRegistryFiles(unitsFS, UNITS_PATH)
@@ -258,4 +269,9 @@ func init() {
 	}
 
 	EmbeddedUnitRegistry = &registry
+
+	EmbeddedUnitRegistryJSON, err = registry.ToJSON()
+	if err != nil {
+		panic(err)
+	}
 }

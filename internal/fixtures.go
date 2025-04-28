@@ -13,8 +13,8 @@ func GetFixtureUnitEntriesStr() string {
 			"name": "kilometer",
 			"value": 1000.0,
 			"aliases": [
-				"km",
-				"kilometers"
+				"kilometers",
+				"km"
 			]
 		},
 		{

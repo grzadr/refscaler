@@ -149,10 +149,27 @@ func TestNewUnitRegistryFiles(t *testing.T) {
 	}
 
 	json_str, err := registry.ToJSON()
-
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Error(json_str)
+	if len(json_str) == 0 {
+		t.Fatalf("expected non-empty JSON string from registry.ToJSON()")
+	}
+
+	expected_substr := []string{
+		"\"empty\": []",
+		"\"test_unit\": [",
+		"\"name\": \"meter\",\n",
+	}
+
+	for _, substr := range expected_substr {
+		if !strings.Contains(json_str, substr) {
+			t.Fatalf(
+				"expected JSON to contain '%s', but got: %s",
+				substr,
+				json_str,
+			)
+		}
+	}
 }
