@@ -147,4 +147,12 @@ func TestNewUnitRegistryFiles(t *testing.T) {
 	if err := verifyUnitGroup(&entries, test_unit_group); err != nil {
 		t.Fatal(err)
 	}
+
+	json_str, err := registry.ToJSON()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Error(json_str)
 }

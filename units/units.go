@@ -2,6 +2,7 @@ package units
 
 import (
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -75,11 +76,51 @@ func (g *UnitGroup) Length() int {
 	return len(g.units)
 }
 
+type UnitJSON struct {
+	Name    string   `json:"name"`
+	Value   float64  `json:"value"`
+	Aliases []string `json:"aliases"`
+}
+
+type UnitGroupJSON []UnitJSON
+
+func (g *UnitGroup) JSONSerialize() UnitGroupJSON {
+	json_units := make(UnitGroupJSON, 0, g.Length())
+	visited_units := make(map[string]int, g.Length())
+	current_idx := 0
+
+	for _, unit := range g.units {
+		json_units = append(json_units, UnitJSON{
+			Name:    unit.Name,
+			Value:   unit.Multiplier,
+			Aliases: make([]string, 0, 4),
+		})
+
+		visited_units[unit.Name] = current_idx
+		current_idx++
+	}
+
+	for alias, unit := range g.aliases {
+		name := unit.Name
+
+		if alias == unit.Name {
+			continue
+		}
+		idx := visited_units[name]
+
+		json_unit := json_units[idx]
+
+		json_unit.Aliases = append(json_unit.Aliases, alias)
+		json_units[idx] = json_unit
+	}
+
+	return json_units
+}
+
 func newUnitGroupDefault() *UnitGroup {
 	return &UnitGroup{
 		units:   make(UnitsSlice, 0, 32),
 		aliases: make(UnitAliases, 128),
-		// baseUnit: &Unit{},
 	}
 }
 
@@ -103,6 +144,7 @@ func NewUnitGroup(unitsData io.Reader) (group *UnitGroup, err error) {
 type UnitRegistry interface {
 	Find(alias string) (group *UnitGroup, ok bool)
 	Add(key string, group *UnitGroup)
+	ToJSON() (string, error)
 }
 
 type UnitRegistryFiles map[string]*UnitGroup
@@ -129,6 +171,23 @@ func (r *UnitRegistryFiles) Find(alias string) (group *UnitGroup, ok bool) {
 	}
 
 	return nil, false
+}
+
+func (r *UnitRegistryFiles) ToJSON() (string, error) {
+	json_registry := make(map[string]UnitGroupJSON, len(*r))
+
+	for name, group := range *r {
+		json_registry[name] = group.JSONSerialize()
+	}
+
+
+	str, err := json.MarshalIndent(json_registry, "", "  ")
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(str), nil
 }
 
 func loadUnitGroupFromJsonFile(
