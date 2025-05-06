@@ -467,3 +467,7 @@ func (e *Enlistment) GetScaled(scale MeasureValue) *Enlistment {
 func (e *Enlistment) ToString(num_units int) []string {
 	return e.records.toString(num_units, e.group)
 }
+
+func (e *Enlistment) Length() int {
+	return len(e.records)
+}

@@ -253,10 +253,7 @@ var unitsFS embed.FS
 
 const UNITS_PATH = "units_db"
 
-var (
-	EmbeddedUnitRegistry     *UnitRegistryFiles = nil
-	EmbeddedUnitRegistryJSON                    = ""
-)
+var EmbeddedUnitRegistry *UnitRegistryFiles = nil
 
 func newEmbeddedUnitRegistry() (registry UnitRegistryFiles, err error) {
 	return NewUnitRegistryFiles(unitsFS, UNITS_PATH)
@@ -269,9 +266,4 @@ func init() {
 	}
 
 	EmbeddedUnitRegistry = &registry
-
-	EmbeddedUnitRegistryJSON, err = registry.ToJSON()
-	if err != nil {
-		panic(err)
-	}
 }

@@ -8,6 +8,7 @@ BINARY_UNIX=$(BINARY_NAME)_unix
 BIN_DIR=bin
 COVER_DIR=coverage
 SRC_DIR=./...
+VERSION=$(shell cat VERSION)
 
 all: test build
 
@@ -38,4 +39,19 @@ clean:
 run: build
 	./$(BIN_DIR)/$(BINARY_NAME)
 
-.PHONY: all build lint test clean run test-cover fmt
+tag: lint test
+	git add .
+	git commit -a -m "$(VERSION)"
+	git tag -a $(VERSION) -m "$(VERSION)"
+	git push origin $(VERSION)
+
+.PHONY: \
+	all \
+	build \
+	clean \
+	fmt \
+	lint \
+	run \
+	tag \
+	test \
+	test-cover

@@ -68,6 +68,14 @@ func TestNewEnlistmentFromFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		if enlistment.Length() != len(expected) {
+			t.Fatalf(
+				"expected %d records, got %d",
+				len(expected),
+				enlistment.Length(),
+			)
+		}
+
 		if err := helperCompareEnlistments(expected, enlistment); err != nil {
 			t.Fatal(err)
 		}
