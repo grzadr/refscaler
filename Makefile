@@ -42,6 +42,7 @@ run: build
 tag: lint test
 	git add .
 	git commit -a -m "$(VERSION)"
+	git push
 	git tag -a $(VERSION) -m "$(VERSION)"
 	git push origin $(VERSION)
 
